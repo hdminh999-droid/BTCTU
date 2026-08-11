@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bảng điều khiển số hóa hồ sơ đảng viên</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root{
+  --bg:#EEF0F2;
+  --paper:#FFFFFF;
+  --ink:#1F2933;
+  --ink-soft:#5A6472;
+  --red:#8F1B2E;
+  --red-deep:#6E1423;
+  --gold:#A9781F;
+  --gold-soft:#F3E7C4;
+  --green:#1F7A4D;
+  --green-soft:#E1F1E7;
+  --amber:#B96A00;
+  --amber-soft:#FBEBD4;
+  --danger:#A6291F;
+  --danger-soft:#F8E2DE;
+  --line:#DCE0E5;
+  --line-soft:#EBEDF0;
+  --font-display:'Noto Serif', Georgia, serif;
+  --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:'JetBrains Mono', 'Roboto Mono', monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:16.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+  min-height:100vh;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 60px;}
+
+/* Header */
+.header{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:16px;
+  flex-wrap:wrap;
+  padding:22px 26px;
+  background:linear-gradient(135deg,var(--red-deep),var(--red) 70%);
+  border-radius:14px;
+  color:#F6EFE3;
+  margin-bottom:18px;
+  position:relative;
+  overflow:hidden;
+}
+.header::after{
+  content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;
+  border:2px dashed rgba(246,239,227,.18);
+}
+.header .eyebrow{
+  font-family:var(--font-mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold-soft);opacity:.9;margin-bottom:6px;
+}
+.header h1{
+  font-family:var(--font-display);font-weight:600;font-size:29px;margin:0 0 6px;
+  line-height:1.25;max-width:640px;
+}
+.header p{margin:0;font-size:15px;color:#EADFC8;max-width:560px;line-height:1.5;}
+.header-side{text-align:right;font-size:14px;color:#EADFC8;z-index:1;}
+.header-side button{
+  margin-top:8px;background:rgba(255,255,255,.12);color:#F6EFE3;border:1px solid rgba(255,255,255,.35);
+  padding:7px 14px;border-radius:8px;font-family:var(--font-body);font-size:14.5px;font-weight:600;cursor:pointer;
+}
+.header-side button:hover{background:rgba(255,255,255,.22);}
+
+.notice{
+  background:var(--gold-soft);border:1px solid #E4CE95;color:#6B4E12;font-size:14.5px;
+  padding:9px 14px;border-radius:9px;margin-bottom:18px;line-height:1.5;
+}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--line);}
+.tab-btn{
+  font-family:var(--font-body);font-weight:600;font-size:16px;color:var(--ink-soft);
+  background:none;border:none;padding:10px 4px;margin-right:22px;cursor:pointer;
+  border-bottom:2.5px solid transparent;position:relative;top:1px;
+}
+.tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* Cards */
+.card{
+  background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  padding:20px 22px;margin-bottom:18px;
+}
+.card h2{
+  font-family:var(--font-display);font-size:19px;font-weight:600;margin:0 0 4px;color:var(--ink);
+}
+.card .sub{font-size:15px;color:#414A54;margin:0 0 16px;line-height:1.6;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media (max-width:820px){.grid-2{grid-template-columns:1fr;}}
+
+/* Form */
+label{display:block;font-size:15px;font-weight:600;color:#414A54;margin:0 0 6px;}
+input[type=text],input[type=number],input[type=date],input[type=month],select,textarea{
+  width:100%;font-family:var(--font-body);font-size:16px;color:var(--ink);
+  border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#FCFCFD;
+  margin-bottom:14px;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold);}
+textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media (max-width:520px){.field-row{grid-template-columns:1fr;}}
+.field-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:stretch;}
+@media (max-width:620px){.field-row-3{grid-template-columns:1fr;}}
+
+.phase-cell{
+  display:flex;flex-direction:column;height:100%;
+  border:1px solid var(--line);border-radius:9px;background:#FCFCFD;
+  padding:11px 12px 12px;
+}
+.phase-cell .phase-label{font-size:14.5px;font-weight:600;color:var(--ink);margin:0 0 4px;}
+.phase-cell .phase-desc{font-size:13.5px;color:var(--ink-soft);line-height:1.45;margin:0 0 10px;flex:1;}
+.phase-cell input[type=number]{margin:0;margin-top:auto;}
+
+.btn{
+  font-family:var(--font-body);font-weight:600;font-size:15.5px;cursor:pointer;
+  border-radius:8px;padding:10px 18px;border:1px solid transparent;
+}
+.btn-primary{background:var(--red);color:#fff;}
+.btn-primary:hover{background:var(--red-deep);}
+.btn-ghost{background:none;border:1px solid var(--line);color:var(--ink-soft);}
+.btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+.btn-sm{padding:6px 11px;font-size:14.5px;}
+.btn-danger{background:none;color:var(--danger);border:1px solid var(--danger-soft);}
+.btn-danger:hover{background:var(--danger-soft);}
+
+.hint{font-size:14px;color:#414A54;line-height:1.55;margin-top:-9px;margin-bottom:14px;}
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;
+  opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;z-index:50;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+/* KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+.kpi .label{font-size:14px;color:#414A54;text-transform:uppercase;letter-spacing:.03em;font-weight:700;margin-bottom:8px;}
+.kpi .value{font-family:var(--font-mono);font-size:27px;font-weight:700;color:var(--ink);}
+.kpi .value small{font-size:15px;font-weight:600;color:var(--ink-soft);}
+.kpi .delta{font-size:14px;margin-top:4px;color:var(--ink-soft);}
+
+/* Roadmap / seal */
+.roadmap{position:relative;padding:26px 0 6px;}
+.stages{display:flex;gap:10px;}
+.stage{flex:1;position:relative;}
+.stage .bar-track{height:14px;background:var(--line-soft);border-radius:7px;overflow:hidden;border:1px solid var(--line);}
+.stage .bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--red));border-radius:7px 0 0 7px;}
+.stage .stage-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:14px;color:var(--ink-soft);}
+.stage .stage-title{font-family:var(--font-display);font-weight:600;font-size:15.5px;color:var(--ink);margin-bottom:4px;}
+.stage .stage-target{font-family:var(--font-mono);font-weight:600;color:var(--ink);}
+.stage .deadline-badge{
+  display:inline-block;margin-top:6px;font-size:13px;padding:2px 8px;border-radius:999px;font-weight:600;
+}
+.badge-ontime{background:var(--green-soft);color:var(--green);}
+.badge-warn{background:var(--amber-soft);color:var(--amber);}
+.badge-late{background:var(--danger-soft);color:var(--danger);}
+
+.seal{
+  position:absolute;top:-22px;right:6px;width:96px;height:96px;border-radius:50%;
+  border:3px dashed var(--red);display:flex;align-items:center;justify-content:center;
+  flex-direction:column;transform:rotate(-8deg);background:rgba(143,27,46,.03);
+}
+.seal .pct{font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--red);}
+.seal .cap{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--red);text-transform:uppercase;text-align:center;}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:15.5px;line-height:1.5;}
+th{
+  text-align:left;font-size:13.5px;text-transform:uppercase;letter-spacing:.03em;color:#414A54;
+  border-bottom:1.5px solid var(--line);padding:9px 10px;font-weight:700;
+}
+td{padding:11px 10px;border-bottom:1px solid var(--line-soft);color:var(--ink);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.num{font-family:var(--font-mono);text-align:right;}
+.status-pill{font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;display:inline-block;white-space:nowrap;}
+
+.progress-mini{width:100px;height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;border:1px solid var(--line);display:inline-block;vertical-align:middle;margin-right:8px;}
+.progress-mini > div{height:100%;background:var(--red);}
+
+.empty-state{
+  text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:15.5px;
+}
+.empty-state b{display:block;color:var(--ink);font-family:var(--font-display);font-size:17.5px;margin-bottom:6px;}
+
+.issue-item{padding:11px 0;border-bottom:1px solid var(--line-soft);}
+.issue-item:last-child{border-bottom:none;}
+.issue-item .meta{font-size:13.5px;color:var(--ink-soft);margin-bottom:3px;}
+.issue-item .meta b{color:var(--ink);}
+.issue-item .text{font-size:15px;color:var(--ink);line-height:1.5;}
+
+.unit-manage-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);}
+.unit-manage-row:last-child{border-bottom:none;}
+.unit-manage-row .name{flex:1;font-weight:600;font-size:15.5px;}
+.unit-manage-row input[type=number]{width:110px;margin:0;}
+.unit-manage-row input[type=text]{margin:0;}
+
+.chart-wrap{position:relative;height:280px;}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.toolbar .right{display:flex;gap:8px;}
+
+.subtabs{display:flex;gap:6px;margin-bottom:16px;}
+.subtab-btn{
+  font-family:var(--font-body);font-size:14.5px;font-weight:600;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;
+}
+.subtab-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+.subform{display:none;}
+.subform.active{display:block;}
+
+.gs-status{
+  display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;padding:9px 12px;
+  border-radius:9px;margin-bottom:14px;
+}
+.gs-status .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.gs-status.ok{background:var(--green-soft);color:var(--green);}
+.gs-status.ok .dot{background:var(--green);}
+.gs-status.bad{background:var(--danger-soft);color:var(--danger);}
+.gs-status.bad .dot{background:var(--danger);}
+.gs-status.checking{background:var(--amber-soft);color:var(--amber);}
+.gs-status.checking .dot{background:var(--amber);}
+.setup-steps{font-size:14.5px;color:var(--ink-soft);line-height:1.7;margin:0 0 14px;padding-left:18px;}
+.setup-steps b{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <div class="eyebrow">Ban Tổ chức Thành ủy Đồng Nai</div>
+      <h1>Bảng điều khiển tiến độ số hóa hồ sơ đảng viên</h1>
+      <p>Theo dõi tiến độ số hóa, tạo lập dữ liệu đảng viên, hồ sơ đảng viên điện tử theo Kế hoạch số hóa của Ban Thường vụ Thành ủy — 150.795 hồ sơ, triển khai theo 3 giai đoạn đến năm 2027.</p>
+    </div>
+    <div class="header-side">
+      <div id="lastRefresh">Đang tải dữ liệu…</div>
+      <button onclick="refreshAll(true)">↻ Làm mới dữ liệu</button>
+    </div>
+  </div>
+
+  <div class="notice">⚠ Dữ liệu trên bảng này được <b>lưu chung trên Google Sheet</b> (qua Google Apps Script): mọi đơn vị và Ban Tổ chức truy cập cùng đường link sẽ thấy chung một bộ dữ liệu báo cáo, và mỗi báo cáo ngày cũng được tự động ghi vào Sheet để thống kê. Danh sách 99 phường/xã và đảng bộ trực thuộc đã được nạp sẵn (chỉ tiêu = 0) — vào tab "Tổng hợp toàn Thành phố → Quản lý đơn vị" để giao chỉ tiêu theo từng giai đoạn cho từng đơn vị.</div>
+
+  <div id="gsStatusBanner"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="unit" onclick="switchTab('unit')">Báo cáo đơn vị</button>
+    <button class="tab-btn" data-tab="admin" onclick="switchTab('admin')">Tổng hợp toàn Thành phố</button>
+  </div>
+
+  <!-- ============ TAB: UNIT REPORTING ============ -->
+  <div class="tab-panel active" id="tab-unit">
+
+    <div class="card">
+      <h2>Chọn đơn vị báo cáo</h2>
+      <p class="sub">Chọn đơn vị của bạn để nộp báo cáo tiến độ hằng ngày. Kết quả tháng được hệ thống tự động tổng hợp — không cần báo cáo riêng. Chưa thấy tên đơn vị? Vào tab "Tổng hợp toàn Thành phố → Quản lý đơn vị" để thêm.</p>
+      <select id="unitSelect" onchange="onUnitChange()"></select>
+    </div>
+
+    <div id="unitFormsArea"></div>
+
+    <div class="card">
+      <h2>Lịch sử báo cáo gần đây</h2>
+      <p class="sub" id="unitHistorySub">Chọn một đơn vị để xem lịch sử.</p>
+      <div class="subtabs">
+        <button class="subtab-btn active" data-h="daily" onclick="switchHistoryView('daily')">Theo ngày</button>
+        <button class="subtab-btn" data-h="monthly" onclick="switchHistoryView('monthly')">Theo tháng</button>
+        <button class="subtab-btn" data-h="orgs" onclick="switchHistoryView('orgs')">Tổ chức đảng đã hoàn thành</button>
+      </div>
+      <div id="unitHistoryTable"></div>
+    </div>
+
+  </div>
+
+  <!-- ============ TAB: ADMIN ============ -->
+  <div class="tab-panel" id="tab-admin">
+
+    <div class="card" style="display:none;">
+      <h2>Kết nối Google Sheet</h2>
+      <p class="sub">Toàn bộ dữ liệu của dashboard (đơn vị, chỉ tiêu, báo cáo ngày) được lưu trên một Google Sheet thông qua Google Apps Script — miễn phí, không cần server riêng. Mỗi báo cáo ngày cũng được ghi thêm 1 dòng vào sheet "BaoCaoNgay" để làm PivotTable/biểu đồ thống kê trực tiếp trên Google Sheet.</p>
+      <div id="gsStatusArea"></div>
+      <ol class="setup-steps">
+        <li>Tạo 1 Google Sheet mới → <b>Tiện ích mở rộng → Apps Script</b> → dán mã đã cung cấp (file <b>google-apps-script.gs</b>) → <b>Deploy → New deployment → Web app</b> (Execute as: Me, Who has access: Anyone).</li>
+        <li>Copy URL dạng <code>.../exec</code>, dán vào ô dưới rồi bấm "Lưu & kiểm tra".</li>
+        <li>Muốn dùng chung cho mọi người mà không phải dán lại: mở file HTML, tìm dòng <code>DEFAULT_APPS_SCRIPT_URL</code>, dán URL vào đó rồi mới đẩy lên Netlify.</li>
+      </ol>
+      <label>URL Web App Google Apps Script</label>
+      <input type="text" id="gsUrlInput" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+      <button class="btn btn-primary btn-sm" onclick="saveAppsScriptURL()">Lưu &amp; kiểm tra kết nối</button>
+      <button class="btn btn-ghost btn-sm" onclick="checkAppsScriptConnection(true)">Kiểm tra lại</button>
+    </div>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="card">
+      <h2>Lộ trình 3 giai đoạn</h2>
+      <p class="sub">Theo Kế hoạch số hóa, tạo lập dữ liệu đảng viên — mục tiêu và thời hạn hoàn thành từng giai đoạn. Số lũy kế Toàn thành phố = tổng số <b>lũy kế báo cáo ngày gần nhất</b> của từng đơn vị. Lũy kế của mỗi đơn vị nay do hệ thống <b>tự cộng dồn</b> từ số hồ sơ hoàn thành mỗi ngày (đơn vị không cần tự gõ số lũy kế) — nên nếu một đơn vị báo sai 1 ngày, chỉ cần sửa/xóa đúng ngày đó ở tab "Báo cáo đơn vị → Lịch sử báo cáo gần đây", các ngày sau sẽ tự tính lại đúng.</p>
+      <div class="roadmap" id="roadmapArea"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Lũy kế theo đơn vị</h2>
+        <p class="sub">Chọn một đơn vị để xem số hồ sơ đã số hóa lũy kế so với chỉ tiêu được giao.</p>
+        <select id="unitChartSelect" style="margin-bottom:14px;"></select>
+        <div class="chart-wrap"><canvas id="unitChart"></canvas></div>
+        <div id="unitChartSummary" class="hint" style="margin-top:10px;"></div>
+      </div>
+      <div class="card">
+        <h2>So sánh tất cả đơn vị</h2>
+        <p class="sub">So sánh số hồ sơ đã số hóa lũy kế giữa các đơn vị.</p>
+        <div class="chart-wrap"><canvas id="allUnitsChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Khó khăn, vướng mắc gần đây</h2>
+        <p class="sub">Tổng hợp từ các báo cáo ngày của đơn vị.</p>
+        <div id="issuesFeed"><div class="empty-state">Chưa có phản ánh nào.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0;">Bảng tổng hợp theo đơn vị</h2>
+        <div class="right"><button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Xuất CSV</button></div>
+      </div>
+      <div id="unitTableArea"></div>
+    </div>
+
+    <div class="card">
+      <h2>Chỉ tiêu &amp; tiến độ theo giai đoạn của từng đơn vị</h2>
+      <p class="sub">Lũy kế từng giai đoạn được cộng trực tiếp từ số hồ sơ đơn vị nhập theo từng giai đoạn trong báo cáo ngày (không còn suy đoán theo thứ tự tuần tự 1 → 2 → 3). Báo cáo cũ trước khi tách giai đoạn chỉ được tính vào tổng lũy kế chung ở các bảng khác, chưa phân theo giai đoạn ở đây. Chỉnh chỉ tiêu từng giai đoạn cho từng đơn vị ở mục "Quản lý đơn vị" bên dưới.</p>
+      <div id="unitPhaseArea"></div>
+    </div>
+
+    <div class="card">
+      <h2>Danh sách tổ chức đảng đã số hóa hoàn thiện</h2>
+      <p class="sub">Tổng hợp từ danh sách các đơn vị gửi kèm báo cáo ngày và báo cáo tháng.</p>
+      <div id="completedOrgsArea"></div>
+    </div>
+
+    <div class="card">
+      <h2>Quản lý đơn vị</h2>
+      <p class="sub">Thêm, sửa tên đơn vị và chỉ tiêu số hồ sơ được giao. Thay đổi áp dụng ngay cho toàn bộ dashboard.</p>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="resetToOfficialList()">⟳ Nạp lại danh sách 99 phường/xã và đảng bộ trực thuộc chính thức</button>
+      <div id="unitManageArea"></div>
+      <div style="margin-top:10px;">
+        <label>Tên đơn vị mới</label>
+        <input type="text" id="newUnitName" placeholder="VD: Đảng ủy xã Long Thành">
+      </div>
+      <div class="field-row-3">
+        <div>
+          <label>Chỉ tiêu Giai đoạn 1</label>
+          <input type="number" id="newUnitTarget1" placeholder="0">
+        </div>
+        <div>
+          <label>Chỉ tiêu Giai đoạn 2</label>
+          <input type="number" id="newUnitTarget2" placeholder="0">
+        </div>
+        <div>
+          <label>Chỉ tiêu Giai đoạn 3</label>
+          <input type="number" id="newUnitTarget3" placeholder="0">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addUnit()">+ Thêm đơn vị</button>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Constants from Kế hoạch số hóa hồ sơ đảng viên ---------- */
+const PHASES = [
+  {id:1, label:'Giai đoạn 1', desc:'Hồ sơ cán bộ diện cấp ủy các cấp quản lý; cán bộ lãnh đạo, quản lý chủ chốt', target:13305, deadline:'2026-09-30'},
+  {id:2, label:'Giai đoạn 2', desc:'Hồ sơ đang sử dụng thường xuyên trong công tác tổ chức cán bộ, quản lý đảng viên', target:121332, deadline:'2026-12-31'},
+  {id:3, label:'Giai đoạn 3', desc:'Hồ sơ đảng viên còn lại (từ trần, xóa tên, khai trừ...)', target:16158, deadline:'2027-12-31', note:'Trong năm 2027 (chưa có mốc ngày cụ thể)'}
+];
+const TOTAL_TARGET = PHASES.reduce((s,p)=>s+p.target,0);
+
+const OFFICIAL_UNIT_NAMES = [
+  "Phường An Lộc","Phường Bảo Vinh","Phường Biên Hòa","Phường Bình Lộc","Phường Bình Long",
+  "Phường Bình Phước","Phường Chơn Thành","Phường Dầu Giây","Phường Đồng Phú","Phường Đồng Xoài",
+  "Phường Hàng Gòn","Phường Hố Nai","Phường Lộc Ninh","Phường Long Bình","Phường Long Hưng",
+  "Phường Long Khánh","Phường Long Thành","Phường Minh Hưng","Phường Nhơn Trạch","Phường Phước Bình",
+  "Phường Phước Long","Phường Phước Tân","Phường Tam Hiệp","Phường Tam Phước","Phường Tân Khai",
+  "Phường Tân Phú","Phường Tân Triều","Phường Trấn Biên","Phường Trảng Bom","Phường Trảng Dài",
+  "Phường Trị An","Phường Xuân Lập","Phường Xuân Lộc","Xã An Phước","Xã An Viễn",
+  "Xã Bàu Hàm","Xã Bình An","Xã Bình Minh","Xã Bình Tân","Xã Bom Bo",
+  "Xã Bù Đăng","Xã Bù Gia Mập","Xã Cẩm Mỹ","Xã Đa Kia","Xã Đại Phước",
+  "Xã Đak Lua","Xã Đak Nhau","Xã Đăk Ơ","Xã Định Quán","Xã Đồng Tâm",
+  "Xã Gia Kiệm","Xã Hưng Phước","Xã Hưng Thịnh","Xã La Ngà","Xã Lộc Hưng",
+  "Xã Lộc Quang","Xã Lộc Tấn","Xã Lộc Thành","Xã Lộc Thạnh","Xã Long Hà",
+  "Xã Long Phước","Xã Minh Đức","Xã Nam Cát Tiên","Xã Nghĩa Trung","Xã Nha Bích",
+  "Xã Phú Hòa","Xã Phú Lâm","Xã Phú Lý","Xã Phú Nghĩa","Xã Phú Riềng",
+  "Xã Phú Trung","Xã Phú Vinh","Xã Phước An","Xã Phước Sơn","Xã Phước Thái",
+  "Xã Sông Ray","Xã Tà Lài","Xã Tân An","Xã Tân Hưng","Xã Tân Lợi",
+  "Xã Tân Quan","Xã Tân Tiến","Xã Thanh Sơn","Xã Thiện Hưng","Xã Thọ Sơn",
+  "Xã Thống Nhất","Xã Thuận Lợi","Xã Xuân Bắc","Xã Xuân Định","Xã Xuân Đông",
+  "Xã Xuân Đường","Xã Xuân Hòa","Xã Xuân Phú","Xã Xuân Quế","Xã Xuân Thành",
+  "Đảng bộ Cơ quan Đảng Thành phố","Đảng bộ UBND Thành phố","Đảng bộ Công an Thành phố","Đảng bộ Quân sự Thành phố"
+];
+const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{1:0,2:0,3:0}}));
+
+let unitsCache = [];
+let unitDataCache = {}; // unitId -> {dailyReports:[], monthlyNotes:[], completedOrgs:[]}
+let unitChartInstance = null;
+let currentHistoryView = 'daily';
+
+/* ---------- Chỉ tiêu theo giai đoạn ---------- */
+function unitPhaseTarget(u, phaseId){
+  return (u.targets && u.targets[phaseId]) || 0;
+}
+function unitTotalTarget(u){
+  return PHASES.reduce((s,p)=> s + unitPhaseTarget(u, p.id), 0);
+}
+
+/* ---------- Kết nối Google Apps Script (backend lưu trên Google Sheet) ---------- */
+/* Dán URL Web App (.../exec) vào đây TRƯỚC KHI đẩy lên Netlify, để mọi người dùng chung
+   một Google Sheet mà không cần tự dán URL vào ô cấu hình. */
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxIWYvb0TWrNQpuboFN8cw2pVxRG7pkdZ7D_15YWAN0UPxXNhRiTcXhqq6j6ezR2gVX3w/exec';
+const LS_KEY_GS_URL = 'gs_apps_script_url';
+
+function getAppsScriptURL(){
+  return (localStorage.getItem(LS_KEY_GS_URL) || DEFAULT_APPS_SCRIPT_URL || '').trim();
+}
+function isGSConfigured(){
+  return getAppsScriptURL().length > 0;
+}
+
+async function saveAppsScriptURL(){
+  const val = document.getElementById('gsUrlInput').value.trim();
+  if(!val){ showToast('Nhập URL Web App trước'); return; }
+  localStorage.setItem(LS_KEY_GS_URL, val);
+  showToast('Đã lưu URL — đang kiểm tra kết nối…');
+  const ok = await checkAppsScriptConnection(true);
+  if(ok) refreshAll(false);
+}
+
+async function checkAppsScriptConnection(showBanner){
+  const areaAdmin = document.getElementById('gsStatusArea');
+  const areaBanner = document.getElementById('gsStatusBanner');
+  const setStatus = (cls, text)=>{
+    const html = `<div class="gs-status ${cls}"><span class="dot"></span>${text}</div>`;
+    if(areaAdmin) areaAdmin.innerHTML = html;
+    if(areaBanner) areaBanner.innerHTML = (cls==='ok') ? '' : html;
+  };
+  if(!isGSConfigured()){
+    setStatus('bad', 'Chưa cấu hình Google Sheet — dữ liệu sẽ KHÔNG được lưu. Nhập URL Apps Script bên dưới (tab "Tổng hợp toàn Thành phố").');
+    return false;
+  }
+  setStatus('checking', 'Đang kiểm tra kết nối tới Google Sheet…');
+  const r = await gsRequest('get', {key:'__ping__'});
+  if(r && r.ok){
+    setStatus('ok', 'Đã kết nối Google Sheet — dữ liệu đang được lưu và ghi log hằng ngày.');
+    return true;
+  } else {
+    setStatus('bad', 'Không kết nối được tới Google Apps Script — kiểm tra lại URL hoặc quyền truy cập ("Anyone").');
+    return false;
+  }
+}
+
+/* ---------- Storage helpers (đọc/ghi qua Google Apps Script) ---------- */
+async function gsRequest(action, params={}){
+  const url = getAppsScriptURL();
+  if(!url) return null;
+  try{
+    if(action==='get' || action==='list' || action==='getByPrefix'){
+      const qs = new URLSearchParams({action, ...params});
+      const res = await fetch(url + '?' + qs.toString());
+      return await res.json();
+    } else {
+      // Dùng text/plain để tránh preflight CORS mà Apps Script không xử lý được
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({action, ...params})
+      });
+      return await res.json();
+    }
+  }catch(e){
+    console.error('Lỗi kết nối Google Sheet', action, e);
+    return null;
+  }
+}
+
+async function getJSONResult(key){
+  const r = await gsRequest('get', {key});
+  if(!r || !r.ok) return {success:false, value:null};
+  if(r.value === undefined || r.value === null) return {success:true, value:null};
+  try{ return {success:true, value: JSON.parse(r.value)}; }catch(e){ return {success:true, value:null}; }
+}
+async function getJSON(key, shared, fallback){
+  const res = await getJSONResult(key);
+  return (res.success && res.value !== null) ? res.value : fallback;
+}
+async function setJSON(key, shared, value){
+  const r = await gsRequest('set', {key, value: JSON.stringify(value)});
+  return !!(r && r.ok);
+}
+async function logDailyReportToSheet(unitName, entry){
+  await gsRequest('log', {
+    unit: unitName,
+    date: entry.date,
+    completedPhase1: entry.completedPhase1,
+    completedPhase2: entry.completedPhase2,
+    completedPhase3: entry.completedPhase3,
+    completedToday: entry.completedToday,
+    cumulative: entry.cumulative,
+    pages: entry.pages,
+    issues: entry.issues,
+    bienBanUrl: entry.bienBanUrl
+  });
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function thisMonthStr(){ return new Date().toISOString().slice(0,7); }
+function fmtNum(n){ return (n||0).toLocaleString('vi-VN'); }
+function daysBetween(a,b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
+
+/* ---------- Load everything ---------- */
+async function loadUnits(){
+  const res = await getJSONResult('config:units');
+  if(!res.success){
+    // Đọc thất bại (lỗi mạng / Apps Script chưa phản hồi kịp) — TUYỆT ĐỐI không tự ý
+    // ghi danh sách mẫu đè lên Sheet, tránh xóa mất chỉ tiêu thật đã nhập cho từng đơn vị.
+    return null;
+  }
+  let units = res.value;
+  if(!units || !Array.isArray(units) || units.length === 0){
+    // Chỉ khi đọc THÀNH CÔNG và Sheet thật sự chưa có dữ liệu mới nạp danh sách mẫu.
+    units = SAMPLE_UNITS;
+    await setJSON('config:units', true, units);
+  }
+  return units;
+}
+
+async function loadUnitData(unitId){
+  return await getJSON('unit-data:'+unitId, true, {dailyReports:[], monthlyNotes:[], completedOrgs:[]});
+}
+async function saveUnitData(unitId, data){
+  return await setJSON('unit-data:'+unitId, true, data);
+}
+
+/* Lũy kế không còn là số đơn vị tự gõ — hệ thống tự cộng dồn từ số hồ sơ hoàn thành
+   mỗi ngày theo từng giai đoạn. Báo cáo cũ (trước khi tách giai đoạn) không có
+   completedPhase1/2/3 nên chỉ được cộng vào tổng chung, chưa phân theo giai đoạn,
+   để không làm mất lũy kế đã có trước đó. */
+function computeCumulativeSeries(dailyReports){
+  const sorted = [...(dailyReports||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  let c1=0, c2=0, c3=0, legacyTotal=0;
+  return sorted.map(r=>{
+    const hasPhaseSplit = (r.completedPhase1!==undefined || r.completedPhase2!==undefined || r.completedPhase3!==undefined);
+    if(hasPhaseSplit){
+      c1 += (r.completedPhase1||0);
+      c2 += (r.completedPhase2||0);
+      c3 += (r.completedPhase3||0);
+    } else {
+      legacyTotal += (r.completedToday||0);
+    }
+    return {...r, cumulativePhase1:c1, cumulativePhase2:c2, cumulativePhase3:c3, cumulative:c1+c2+c3+legacyTotal};
+  });
+}
+
+function getLatestCumulative(unitData){
+  const series = computeCumulativeSeries(unitData.dailyReports);
+  if(series.length===0) return null;
+  const last = series[series.length-1];
+  return {cumulative:last.cumulative, cumulativePhase1:last.cumulativePhase1, cumulativePhase2:last.cumulativePhase2, cumulativePhase3:last.cumulativePhase3, date:last.date, source:'daily'};
+}
+
+function computeMonthlyStats(dailyReports){
+  const series = computeCumulativeSeries(dailyReports);
+  const byMonth = {};
+  series.forEach(r=>{
+    const month = r.date.slice(0,7);
+    if(!byMonth[month]) byMonth[month] = {month, completedMonth:0, cumulative:0, daysReported:0, lastDate:r.date};
+    byMonth[month].completedMonth += (r.completedToday||0);
+    byMonth[month].cumulative = r.cumulative;
+    byMonth[month].lastDate = r.date;
+    byMonth[month].daysReported += 1;
+  });
+  return Object.values(byMonth).sort((a,b)=> a.month.localeCompare(b.month));
+}
+
+async function refreshAll(manual){
+  const urlInput = document.getElementById('gsUrlInput');
+  if(urlInput && !urlInput.value) urlInput.value = getAppsScriptURL();
+  await checkAppsScriptConnection(true);
+  if(!isGSConfigured()){
+    document.getElementById('lastRefresh').textContent = 'Chưa kết nối Google Sheet';
+    populateUnitSelect(); renderUnitForms(); renderUnitHistory(); renderAdmin();
+    return;
+  }
+
+  unitsCache = await loadUnits();
+
+  if(unitsCache === null){
+    // Đọc danh sách đơn vị thất bại (lỗi mạng / Apps Script chưa phản hồi kịp) —
+    // không vẽ tiếp với dữ liệu rỗng, và không ghi gì lên Sheet. Báo lỗi rõ để thử lại.
+    document.getElementById('lastRefresh').textContent = 'Lỗi tải dữ liệu — bấm "Làm mới dữ liệu" để thử lại';
+    showToast('Không tải được danh sách đơn vị từ Google Sheet — kiểm tra kết nối rồi làm mới lại');
+    unitsCache = [];
+    return;
+  }
+
+  unitDataCache = {};
+
+  if(unitsCache.length > 0){
+    const lastRefreshEl = document.getElementById('lastRefresh');
+    if(lastRefreshEl) lastRefreshEl.textContent = 'Đang tải dữ liệu…';
+
+    // Cách nhanh: lấy TOÀN BỘ dữ liệu đơn vị trong 1 lần gọi duy nhất
+    // (cần code Apps Script đã được cập nhật để hỗ trợ action "getByPrefix").
+    const bulk = await gsRequest('getByPrefix', {prefix: 'unit-data:'});
+    if(bulk && bulk.ok && bulk.values){
+      unitsCache.forEach(u => {
+        const raw = bulk.values['unit-data:' + u.id];
+        let data = {dailyReports:[], monthlyNotes:[], completedOrgs:[]};
+        if(raw){
+          try{ data = JSON.parse(raw); }catch(e){ /* giữ mặc định nếu dữ liệu lỗi */ }
+        }
+        unitDataCache[u.id] = data;
+      });
+    } else {
+      // Dự phòng: nếu Apps Script CHƯA được cập nhật (chưa có action getByPrefix),
+      // quay lại cách cũ — tải theo từng nhóm song song để trang vẫn chạy được,
+      // dù chậm hơn.
+      const batchSize = 15;
+      let loadedCount = 0;
+      for(let i = 0; i < unitsCache.length; i += batchSize){
+        const chunk = unitsCache.slice(i, i + batchSize);
+        if(lastRefreshEl){
+          lastRefreshEl.textContent = 'Đang tải dữ liệu đơn vị ' + loadedCount + '/' + unitsCache.length + '…';
+        }
+        const results = await Promise.all(chunk.map(async (u) => ({ id: u.id, data: await loadUnitData(u.id) })));
+        results.forEach(res => { unitDataCache[res.id] = res.data; });
+        loadedCount += chunk.length;
+      }
+    }
+  }
+
+  populateUnitSelect();
+  renderUnitForms();
+  renderUnitHistory();
+  renderUnitManage();
+  renderAdmin();
+
+  document.getElementById('lastRefresh').textContent =
+    'Cập nhật lúc ' + new Date().toLocaleString('vi-VN');
+  if(manual) showToast('Đã làm mới dữ liệu');
+}
+
+/* ---------- Tabs ---------- */
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('tab-unit').classList.toggle('active', tab==='unit');
+  document.getElementById('tab-admin').classList.toggle('active', tab==='admin');
+}
+
+/* ---------- Unit reporting tab ---------- */
+function populateUnitSelect(){
+  const sel = document.getElementById('unitSelect');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  if(unitsCache.length===0){
+    sel.innerHTML = '<option value="">— Chưa có đơn vị nào —</option>';
+    return;
+  }
+  unitsCache.forEach(u=>{
+    const opt = document.createElement('option');
+    opt.value = u.id; opt.textContent = u.name;
+    sel.appendChild(opt);
+  });
+  if(prev && unitsCache.some(u=>u.id===prev)) sel.value = prev;
+}
+
+function currentUnitId(){
+  return document.getElementById('unitSelect').value;
+}
+
+function onUnitChange(){
+  renderUnitForms();
+  renderUnitHistory();
+}
+
+function renderUnitForms(){
+  const area = document.getElementById('unitFormsArea');
+  const uid = currentUnitId();
+  if(!uid){
+    area.innerHTML = '<div class="card"><div class="empty-state"><b>Chưa có đơn vị</b>Vào tab "Tổng hợp toàn Thành phố → Quản lý đơn vị" để thêm đơn vị trước khi báo cáo.</div></div>';
+    return;
+  }
+  const data = unitDataCache[uid] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+  const latest = getLatestCumulative(data);
+  const prevCumulative = latest ? latest.cumulative : 0;
+
+  area.innerHTML = `
+    <div class="card">
+      <h2>Báo cáo hằng ngày</h2>
+      <p class="sub">Nộp số liệu số hóa trong ngày cho đơn vị đã chọn. Nhập số hồ sơ hoàn thành hôm nay <b>theo từng giai đoạn</b> (đúng theo thành phần hồ sơ của mỗi giai đoạn) — hệ thống tự cộng lũy kế theo ngày, đơn vị không cần tự tính hoặc tự gõ số lũy kế. Kết quả tháng cũng được <b>hệ thống tự động tổng hợp</b> từ các báo cáo ngày.</p>
+      <label>Ngày</label>
+      <input type="date" id="dailyDate" value="${todayISO()}" onchange="updateCumulativePreview()">
+
+      <label>Số hồ sơ hoàn thành trong ngày — theo thành phần hồ sơ của từng giai đoạn</label>
+      <div class="field-row-3">
+        ${PHASES.map(p=>`
+          <div class="phase-cell">
+            <p class="phase-label">${escapeHTML(p.label)}</p>
+            <p class="phase-desc">${escapeHTML(p.desc)}</p>
+            <input type="number" id="dailyCompleted${p.id}" min="0" placeholder="0" oninput="updateCumulativePreview()">
+          </div>
+        `).join('')}
+      </div>
+      <div class="hint" id="cumulativePreviewHint">Lũy kế trước ngày này: ${fmtNum(prevCumulative)} hồ sơ.</div>
+
+      <label>Số trang đã số hóa trong ngày (không bắt buộc)</label>
+      <input type="number" id="dailyPages" min="0" placeholder="VD: 3200">
+      <label>Khó khăn, vướng mắc (không bắt buộc)</label>
+      <textarea id="dailyIssues" placeholder="VD: Thiếu máy quét, hồ sơ giấy bị hư hỏng cần xử lý..."></textarea>
+      <label>Danh sách tổ chức đảng đã số hóa hoàn thiện trong ngày (mỗi tổ chức một dòng, không bắt buộc)</label>
+      <textarea id="dailyOrgs" placeholder="VD:&#10;Chi bộ Ấp 1&#10;Chi bộ Khu phố 3&#10;Đảng bộ bộ phận Trường THCS..."></textarea>
+      <div class="hint">Chỉ ghi tên các tổ chức đảng đã số hóa <b>hoàn thiện toàn bộ</b> hồ sơ đảng viên trực thuộc, tính đến ngày báo cáo. Báo nhầm tên tổ chức? Có thể xóa lại ở mục "Lịch sử báo cáo gần đây → Tổ chức đảng đã hoàn thành".</div>
+      <label>Link biên bản làm việc ngày (không bắt buộc)</label>
+      <input type="text" id="dailyBienBan" placeholder="Dán link Google Drive/tài liệu đã chia sẻ...">
+      <div class="hint">Bảng này không lưu được file đính kèm trực tiếp — tải biên bản lên Google Drive (hoặc nơi lưu trữ chung của đơn vị), bật chia sẻ, rồi dán link vào đây.</div>
+      <button class="btn btn-primary" onclick="submitDaily()">Nộp báo cáo ngày</button>
+    </div>
+  `;
+  updateCumulativePreview();
+}
+
+function updateCumulativePreview(){
+  const uid = currentUnitId();
+  const hintEl = document.getElementById('cumulativePreviewHint');
+  if(!uid || !hintEl) return;
+  const data = unitDataCache[uid] || {dailyReports:[]};
+  const date = document.getElementById('dailyDate').value || todayISO();
+  const series = computeCumulativeSeries(data.dailyReports);
+  const before = series.filter(r=>r.date < date);
+  const prevTotal = before.length ? before[before.length-1].cumulative : 0;
+  let todayTotal = 0;
+  PHASES.forEach(p=>{
+    const el = document.getElementById('dailyCompleted'+p.id);
+    if(el) todayTotal += Number(el.value || 0);
+  });
+  hintEl.innerHTML = `Lũy kế trước ngày ${date}: <b>${fmtNum(prevTotal)}</b> hồ sơ. Hoàn thành hôm nay (3 giai đoạn): <b>${fmtNum(todayTotal)}</b> hồ sơ. → <b>Lũy kế sau khi nộp: ${fmtNum(prevTotal+todayTotal)}</b> hồ sơ — hệ thống tự tính, không cần tự gõ.`;
+}
+
+function mergeCompletedOrgs(data, rawText, date, source){
+  if(!rawText) return;
+  const names = rawText.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!data.completedOrgs) data.completedOrgs = [];
+  names.forEach(name=>{
+    const existing = data.completedOrgs.find(o=>o.name.toLowerCase()===name.toLowerCase());
+    if(existing){
+      existing.date = date; // keep most recent confirmation date
+    } else {
+      data.completedOrgs.push({name, date, source, submittedAt: new Date().toISOString()});
+    }
+  });
+  data.completedOrgs.sort((a,b)=> a.date.localeCompare(b.date));
+  if(data.completedOrgs.length>500) data.completedOrgs = data.completedOrgs.slice(-500);
+}
+
+async function submitDaily(){
+  const uid = currentUnitId();
+  if(!uid){ showToast('Chưa chọn đơn vị'); return; }
+  const date = document.getElementById('dailyDate').value || todayISO();
+  const completedPhase1 = Number(document.getElementById('dailyCompleted1').value || 0);
+  const completedPhase2 = Number(document.getElementById('dailyCompleted2').value || 0);
+  const completedPhase3 = Number(document.getElementById('dailyCompleted3').value || 0);
+  const completedToday = completedPhase1 + completedPhase2 + completedPhase3;
+  const pages = Number(document.getElementById('dailyPages').value || 0);
+  const issues = document.getElementById('dailyIssues').value.trim();
+  const orgsRaw = document.getElementById('dailyOrgs').value.trim();
+  const bienBanUrl = document.getElementById('dailyBienBan').value.trim();
+
+  const data = unitDataCache[uid] || {dailyReports:[],completedOrgs:[]};
+  const entry = {date, completedPhase1, completedPhase2, completedPhase3, completedToday, pages, issues, bienBanUrl, submittedAt: new Date().toISOString()};
+  const existingIdx = data.dailyReports.findIndex(r=>r.date===date);
+  if(existingIdx>=0) data.dailyReports[existingIdx] = entry;
+  else data.dailyReports.push(entry);
+  data.dailyReports.sort((a,b)=> a.date.localeCompare(b.date));
+  if(data.dailyReports.length>120) data.dailyReports = data.dailyReports.slice(-120);
+  mergeCompletedOrgs(data, orgsRaw, date, 'daily');
+
+  const ok = await saveUnitData(uid, data);
+  if(ok){
+    unitDataCache[uid] = data;
+    const unit = unitsCache.find(u=>u.id===uid);
+    const series = computeCumulativeSeries(data.dailyReports);
+    const savedRow = series.find(r=>r.date===date);
+    logDailyReportToSheet(unit ? unit.name : uid, {...entry, cumulative: savedRow ? savedRow.cumulative : completedToday}); // ghi thêm 1 dòng vào sheet "BaoCaoNgay" để thống kê
+    showToast('Đã nộp báo cáo ngày ' + date);
+    renderUnitForms();
+    renderUnitHistory();
+    renderAdmin();
+  } else {
+    showToast('Lỗi khi lưu — kiểm tra kết nối Google Sheet ở tab "Tổng hợp toàn Thành phố"');
+  }
+}
+
+function editDailyReport(date){
+  const uid = currentUnitId();
+  const data = unitDataCache[uid];
+  if(!data) return;
+  const r = data.dailyReports.find(x=>x.date===date);
+  if(!r) return;
+  document.getElementById('dailyDate').value = r.date;
+  PHASES.forEach(p=>{
+    const el = document.getElementById('dailyCompleted'+p.id);
+    if(el) el.value = r['completedPhase'+p.id] || '';
+  });
+  document.getElementById('dailyPages').value = r.pages || '';
+  document.getElementById('dailyIssues').value = r.issues || '';
+  document.getElementById('dailyBienBan').value = r.bienBanUrl || '';
+  document.getElementById('dailyOrgs').value = '';
+  updateCumulativePreview();
+  showToast('Đã nạp báo cáo ngày ' + date + ' lên form — sửa rồi bấm "Nộp báo cáo ngày" để lưu lại');
+  document.getElementById('dailyDate').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function deleteDailyReport(date){
+  const uid = currentUnitId();
+  const unit = unitsCache.find(u=>u.id===uid);
+  const data = unitDataCache[uid];
+  if(!data) return;
+  if(!confirm('Xóa báo cáo ngày ' + date + ' của đơn vị "' + (unit?unit.name:'') + '"? Lũy kế của các ngày sau đó sẽ được hệ thống tự tính lại. Không thể hoàn tác.')) return;
+  data.dailyReports = data.dailyReports.filter(r=>r.date!==date);
+  const ok = await saveUnitData(uid, data);
+  if(ok){
+    unitDataCache[uid] = data;
+    showToast('Đã xóa báo cáo ngày ' + date + ' — lũy kế đã tự tính lại');
+    renderUnitForms();
+    renderUnitHistory();
+    renderAdmin();
+  } else {
+    showToast('Lỗi khi lưu — kiểm tra kết nối Google Sheet');
+  }
+}
+
+function switchHistoryView(v){
+  currentHistoryView = v;
+  document.querySelectorAll('.subtab-btn').forEach(b=>b.classList.toggle('active', b.dataset.h===v));
+  renderUnitHistory();
+}
+
+function renderUnitHistory(){
+  const uid = currentUnitId();
+  const sub = document.getElementById('unitHistorySub');
+  const area = document.getElementById('unitHistoryTable');
+  if(!uid){
+    sub.textContent = 'Chọn một đơn vị để xem lịch sử.';
+    area.innerHTML = '';
+    return;
+  }
+  const unit = unitsCache.find(u=>u.id===uid);
+  sub.textContent = 'Đơn vị: ' + (unit? unit.name : '');
+  const data = unitDataCache[uid] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+
+  if(currentHistoryView==='daily'){
+    const series = computeCumulativeSeries(data.dailyReports);
+    const rows = [...series].reverse().slice(0,15);
+    if(rows.length===0){ area.innerHTML = '<div class="empty-state">Chưa có báo cáo ngày nào.</div>'; return; }
+    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Lũy kế nay do hệ thống <b>tự tính</b> theo ngày (không nhập tay) — nếu 1 ngày bị nhập sai, hãy sửa hoặc xóa ngay dòng đó, các ngày sau sẽ tự tính lại đúng, không cần báo bù ở ngày sau.</div>
+    <table><thead><tr><th>Ngày</th><th class="num">GĐ1</th><th class="num">GĐ2</th><th class="num">GĐ3</th><th class="num">Tổng trong ngày</th><th class="num">Lũy kế</th><th class="num">Số trang</th><th>Khó khăn / vướng mắc</th><th>Biên bản</th><th>Hành động</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr>
+        <td>${r.date}</td>
+        <td class="num">${r.completedPhase1!==undefined?fmtNum(r.completedPhase1):'—'}</td>
+        <td class="num">${r.completedPhase2!==undefined?fmtNum(r.completedPhase2):'—'}</td>
+        <td class="num">${r.completedPhase3!==undefined?fmtNum(r.completedPhase3):'—'}</td>
+        <td class="num">${fmtNum(r.completedToday)}</td>
+        <td class="num">${fmtNum(r.cumulative)}</td>
+        <td class="num">${r.pages?fmtNum(r.pages):'—'}</td>
+        <td>${r.issues? escapeHTML(r.issues) : '—'}</td>
+        <td>${r.bienBanUrl?`<a href="${escapeHTML(r.bienBanUrl)}" target="_blank" rel="noopener">Xem link</a>`:'—'}</td>
+        <td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="editDailyReport('${r.date}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteDailyReport('${r.date}')">Xóa</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  } else if(currentHistoryView==='monthly') {
+    const rows = [...computeMonthlyStats(data.dailyReports)].reverse().slice(0,12);
+    if(rows.length===0){ area.innerHTML = '<div class="empty-state">Chưa có báo cáo ngày nào để tổng hợp theo tháng.</div>'; return; }
+    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Số liệu tháng được <b>tự động tổng hợp</b> từ các báo cáo ngày của đơn vị — không cần nộp báo cáo tháng riêng.</div>
+      <table><thead><tr><th>Tháng</th><th class="num">Hoàn thành trong tháng</th><th class="num">Lũy kế cuối tháng</th><th class="num">Số ngày có báo cáo</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${r.month}</td><td class="num">${fmtNum(r.completedMonth)}</td><td class="num">${fmtNum(r.cumulative)}</td><td class="num">${r.daysReported}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else {
+    const orgs = [...(data.completedOrgs||[])].reverse();
+    if(orgs.length===0){ area.innerHTML = '<div class="empty-state">Chưa ghi nhận tổ chức đảng nào hoàn thành số hóa.</div>'; return; }
+    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Tổng cộng: <b>${orgs.length}</b> tổ chức đảng đã số hóa hoàn thiện. Báo nhầm tên tổ chức? Bấm "Xóa" để gỡ khỏi danh sách.</div>
+      <table><thead><tr><th>Tổ chức đảng</th><th>Ngày xác nhận hoàn thành</th><th>Hành động</th></tr></thead><tbody>
+      ${orgs.map(o=>`<tr><td>${escapeHTML(o.name)}</td><td>${o.date}</td><td><button class="btn btn-danger btn-sm" data-org-del="${escapeHTML(o.name)}">Xóa</button></td></tr>`).join('')}
+    </tbody></table>`;
+    area.querySelectorAll('[data-org-del]').forEach(btn=>{
+      btn.addEventListener('click', ()=> deleteCompletedOrg(uid, btn.dataset.orgDel));
+    });
+  }
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- Admin tab ---------- */
+function currentPhaseIndex(){
+  const today = todayISO();
+  for(let i=0;i<PHASES.length;i++){
+ if(today <= PHASES[i].deadline) return i;
+  }
+  return PHASES.length-1;
+}
+
+function renderAdmin(){
+  const unitsWithStatus = unitsCache.map(u=>{
+    const data = unitDataCache[u.id] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+    const latest = getLatestCumulative(data);
+    const cumulative = latest ? latest.cumulative : 0;
+    const cumulativePhase1 = latest ? latest.cumulativePhase1 : 0;
+    const cumulativePhase2 = latest ? latest.cumulativePhase2 : 0;
+    const cumulativePhase3 = latest ? latest.cumulativePhase3 : 0;
+    const lastDate = latest ? latest.date : null;
+    const gapDays = lastDate ? daysBetween(lastDate, todayISO()) : null;
+    let status = 'never';
+    if(gapDays !== null){
+      if(gapDays <= 7) status = 'ontrack';
+      else if(gapDays <= 14) status = 'warn';
+      else status = 'late';
+    }
+    const target = unitTotalTarget(u);
+    const pct = target>0 ? Math.min(100, (cumulative/target)*100) : 0;
+    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
+  });
+
+  const totalCumulative = unitsWithStatus.reduce((s,u)=>s+u.cumulative,0);
+  const totalTargetAssigned = unitsWithStatus.reduce((s,u)=>s+ (u.target||0), 0);
+  const totalOrgsCompleted = unitsWithStatus.reduce((s,u)=>s+u.orgsCount,0);
+  const reportedToday = unitsWithStatus.filter(u=>{
+    const data = unitDataCache[u.id];
+    return data && data.dailyReports.some(r=>r.date===todayISO());
+  }).length;
+  const staleUnits = unitsWithStatus.filter(u=>u.status==='late' || u.status==='never').length;
+
+  const safeRender = (fn, label) => { try{ fn(); }catch(e){ console.error('Lỗi khi vẽ ' + label, e); } };
+  safeRender(()=>renderKPIs(totalCumulative, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted), 'KPI');
+  safeRender(()=>renderRoadmap(totalCumulative), 'lộ trình');
+  safeRender(()=>renderIssuesFeed(), 'danh sách vướng mắc');
+  safeRender(()=>renderUnitTable(unitsWithStatus), 'bảng đơn vị');
+  safeRender(()=>renderUnitPhaseTable(unitsWithStatus), 'bảng theo giai đoạn');
+  safeRender(()=>renderCompletedOrgsTable(unitsWithStatus), 'bảng tổ chức đảng hoàn thành');
+  safeRender(()=>renderUnitManage(), 'quản lý đơn vị');
+  safeRender(()=>renderUnitChart(unitsWithStatus), 'biểu đồ đơn vị được chọn');
+  safeRender(()=>renderAllUnitsChart(unitsWithStatus), 'biểu đồ so sánh tất cả đơn vị');
+}
+
+function renderKPIs(totalCumulative, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted){
+  const phaseIdx = currentPhaseIndex();
+  const phase = PHASES[phaseIdx];
+  const cumulativeTargetToPhase = PHASES.slice(0,phaseIdx+1).reduce((s,p)=>s+p.target,0);
+  const daysLeft = daysBetween(todayISO(), phase.deadline);
+
+  const kpis = [
+    {label:'Tổng lũy kế toàn Thành phố', value: fmtNum(totalCumulative), extra: `/ ${fmtNum(TOTAL_TARGET)} hồ sơ (mục tiêu chung)`},
+    {label:'Tổ chức đảng đã số hóa hoàn thiện', value: fmtNum(totalOrgsCompleted), extra: 'chi bộ / đảng bộ bộ phận đã báo cáo xong'},
+    {label:'Đơn vị đã báo cáo hôm nay', value: `${reportedToday}`, extra: `/ ${unitCount} đơn vị`},
+    {label:phase.label + ' — còn lại', value: daysLeft>=0? daysLeft+' ngày' : 'Quá hạn', extra: 'đến hạn ' + fmtDate(phase.deadline)},
+    {label:'Đơn vị cần đôn đốc', value: `${staleUnits}`, extra:'chưa cập nhật > 14 ngày hoặc chưa báo cáo'},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+      <div class="delta">${k.extra}</div>
+    </div>
+  `).join('');
+}
+
+function fmtDate(iso){
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderRoadmap(totalCumulative){
+  let remaining = totalCumulative;
+  const overallPct = TOTAL_TARGET>0 ? Math.min(100, (totalCumulative/TOTAL_TARGET)*100) : 0;
+  const today = todayISO();
+
+  const stagesHTML = PHASES.map((p,i)=>{
+    const before = PHASES.slice(0,i).reduce((s,x)=>s+x.target,0);
+    const fillInThisStage = Math.max(0, Math.min(p.target, totalCumulative - before));
+    const pct = p.target>0 ? (fillInThisStage/p.target)*100 : 0;
+    const daysLeft = daysBetween(today, p.deadline);
+    let badgeClass = 'badge-ontime', badgeText = 'Còn ' + daysLeft + ' ngày';
+    if(daysLeft < 0){ badgeClass='badge-late'; badgeText='Đã quá hạn ' + Math.abs(daysLeft) + ' ngày'; }
+    else if(daysLeft <= 30){ badgeClass='badge-warn'; badgeText='Còn ' + daysLeft + ' ngày'; }
+    return `
+      <div class="stage">
+        <div class="stage-title">${p.label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <div class="stage-meta">
+          <span>${p.desc}</span>
+        </div>
+        <div class="stage-meta">
+          <span class="stage-target">${fmtNum(fillInThisStage)} / ${fmtNum(p.target)} hồ sơ</span>
+          <span class="deadline-badge ${badgeClass}">${p.note ? p.note : badgeText}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('roadmapArea').innerHTML = `
+    <div class="seal"><div class="pct">${overallPct.toFixed(0)}%</div><div class="cap">Tiến độ chung</div></div>
+    <div class="stages">${stagesHTML}</div>
+  `;
+}
+
+let selectedChartUnitId = null;
+
+function renderUnitChart(units){
+  const select = document.getElementById('unitChartSelect');
+  const ctx = document.getElementById('unitChart');
+  const summaryEl = document.getElementById('unitChartSummary');
+  if(!select || !ctx) return;
+
+  if(units.length === 0){
+    select.innerHTML = '<option>Chưa có đơn vị nào</option>';
+    if(unitChartInstance){ unitChartInstance.destroy(); unitChartInstance = null; }
+    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    if(summaryEl) summaryEl.textContent = '';
+    return;
+  }
+
+  // Giữ lại đơn vị đang chọn nếu vẫn còn tồn tại; mặc định chọn đơn vị đầu tiên.
+  if(!selectedChartUnitId || !units.some(u=>u.id===selectedChartUnitId)){
+    selectedChartUnitId = units[0].id;
+  }
+  select.innerHTML = units.map(u =>
+    `<option value="${u.id}"${u.id===selectedChartUnitId?' selected':''}>${escapeHTML(u.name)}</option>`
+  ).join('');
+  select.onchange = () => {
+    selectedChartUnitId = select.value;
+    renderUnitChart(units);
+  };
+
+  const unit = units.find(u=>u.id===selectedChartUnitId);
+  const target = Math.max(unit.target||0, 0);
+  const done = Math.max(unit.cumulative||0, 0);
+  const remaining = Math.max(target - done, 0);
+  const overTarget = Math.max(done - target, 0);
+
+  const labels = ['Đã hoàn thành', 'Còn lại so với chỉ tiêu'];
+  const dataValues = [done, remaining];
+  const colors = ['#8F1B2E', '#E4CE95'];
+  if(overTarget > 0){
+    labels.push('Vượt chỉ tiêu');
+    dataValues.push(overTarget);
+    colors.push('#1F7A4D');
+  }
+
+  if(unitChartInstance) unitChartInstance.destroy();
+  unitChartInstance = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data: dataValues, backgroundColor: colors, borderWidth:0 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter', size:12}}} }
+    }
+  });
+
+  if(summaryEl){
+    const pct = target>0 ? Math.round(done/target*100) : 0;
+    summaryEl.innerHTML = `<b>${escapeHTML(unit.name)}</b>: đã số hóa <b>${fmtNum(done)}</b> / <b>${fmtNum(target)}</b> hồ sơ chỉ tiêu (<b>${pct}%</b>)`;
+  }
+}
+
+let allUnitsChartInstance = null;
+function renderAllUnitsChart(units){
+  const ctx = document.getElementById('allUnitsChart');
+  if(!ctx) return;
+  if(allUnitsChartInstance) allUnitsChartInstance.destroy();
+  if(units.length===0){
+    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    return;
+  }
+  allUnitsChartInstance = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: units.map(u=>u.name),
+      datasets:[
+        {label:'Lũy kế', data: units.map(u=>u.cumulative), backgroundColor:'#8F1B2E', borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter', size:11}}} },
+      scales:{
+        x:{ ticks:{font:{family:'Inter', size:10}} },
+        y:{ ticks:{font:{family:'JetBrains Mono', size:10}}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function renderIssuesFeed(){
+  const all = [];
+  unitsCache.forEach(u=>{
+    const data = unitDataCache[u.id] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+    data.dailyReports.forEach(r=>{ if(r.issues) all.push({unit:u.name, date:r.date, text:r.issues, type:'Báo cáo ngày'}); });
+  });
+  all.sort((a,b)=> b.date.localeCompare(a.date));
+  const top = all.slice(0,15);
+  const area = document.getElementById('issuesFeed');
+  if(top.length===0){ area.innerHTML = '<div class="empty-state">Chưa có phản ánh nào.</div>'; return; }
+  area.innerHTML = top.map(it=>`
+    <div class="issue-item">
+      <div class="meta"><b>${escapeHTML(it.unit)}</b> · ${it.date}</div>
+      <div class="text">${escapeHTML(it.text)}</div>
+    </div>
+  `).join('');
+}
+
+function renderCompletedOrgsTable(units){
+  const area = document.getElementById('completedOrgsArea');
+  if(!area) return;
+  const all = [];
+  units.forEach(u=>{
+    const data = unitDataCache[u.id] || {completedOrgs:[]};
+    (data.completedOrgs||[]).forEach(o=> all.push({unit:u.name, unitId:u.id, name:o.name, date:o.date, source:o.source}));
+  });
+  all.sort((a,b)=> b.date.localeCompare(a.date));
+  if(all.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị nào báo cáo tổ chức đảng đã số hóa hoàn thiện.</div>'; return; }
+  const shown = all.slice(0,200);
+  area.innerHTML = `
+    <div class="hint" style="margin-bottom:10px;">Tổng cộng <b>${all.length}</b> tổ chức đảng đã được báo cáo số hóa hoàn thiện trên toàn Thành phố${all.length>200?' — hiển thị 200 bản ghi gần nhất':''}. Đơn vị báo nhầm tên tổ chức? Bấm "Xóa" ở dòng tương ứng để gỡ khỏi danh sách.</div>
+    <table><thead><tr><th>Đơn vị</th><th>Tổ chức đảng</th><th>Ngày xác nhận</th><th>Hành động</th></tr></thead><tbody>
+    ${shown.map(o=>`<tr><td>${escapeHTML(o.unit)}</td><td>${escapeHTML(o.name)}</td><td>${o.date}</td><td><button class="btn btn-danger btn-sm" data-org-unit="${escapeHTML(o.unitId)}" data-org-name="${escapeHTML(o.name)}">Xóa</button></td></tr>`).join('')}
+    </tbody></table>`;
+  area.querySelectorAll('[data-org-unit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteCompletedOrg(btn.dataset.orgUnit, btn.dataset.orgName));
+  });
+}
+
+async function deleteCompletedOrg(unitId, name){
+  const data = unitDataCache[unitId];
+  if(!data || !data.completedOrgs) return;
+  const unit = unitsCache.find(u=>u.id===unitId);
+  if(!confirm('Xóa tổ chức đảng "' + name + '" khỏi danh sách đã số hóa hoàn thiện của đơn vị "' + (unit?unit.name:'') + '"? Dùng khi báo nhầm. Không thể hoàn tác.')) return;
+  data.completedOrgs = data.completedOrgs.filter(o=>o.name!==name);
+  const ok = await saveUnitData(unitId, data);
+  if(ok){
+    unitDataCache[unitId] = data;
+    showToast('Đã xóa "' + name + '" khỏi danh sách tổ chức đảng hoàn thành');
+    renderUnitHistory();
+    renderAdmin();
+  } else {
+    showToast('Lỗi khi lưu — kiểm tra kết nối Google Sheet');
+  }
+}
+
+function statusLabel(status){
+  switch(status){
+    case 'ontrack': return {text:'Đang cập nhật', cls:'badge-ontime'};
+    case 'warn': return {text:'Cần theo dõi', cls:'badge-warn'};
+    case 'late': return {text:'Cần đôn đốc', cls:'badge-late'};
+    default: return {text:'Chưa báo cáo', cls:'badge-late'};
+  }
+}
+
+function renderUnitTable(units){
+  const area = document.getElementById('unitTableArea');
+  if(units.length===0){ area.innerHTML = '<div class="empty-state"><b>Chưa có đơn vị</b>Thêm đơn vị ở mục "Quản lý đơn vị" bên dưới.</div>'; return; }
+  area.innerHTML = `<table><thead><tr>
+    <th>Đơn vị</th><th class="num">Chỉ tiêu</th><th class="num">Lũy kế</th><th>Tiến độ</th><th class="num">Tổ chức đảng hoàn thành</th><th>Cập nhật gần nhất</th><th>Trạng thái</th>
+  </tr></thead><tbody>
+    ${units.map(u=>{
+      const s = statusLabel(u.status);
+      return `<tr>
+        <td>${escapeHTML(u.name)}</td>
+        <td class="num">${fmtNum(u.target)}</td>
+        <td class="num">${fmtNum(u.cumulative)}</td>
+        <td><span class="progress-mini"><div style="width:${u.pct}%"></div></span>${u.pct.toFixed(0)}%</td>
+        <td class="num">${fmtNum(u.orgsCount)}</td>
+        <td>${u.lastDate ? fmtDate(u.lastDate.replace(/-28$/,'') ) : '—'}</td>
+        <td><span class="status-pill ${s.cls}">${s.text}</span></td>
+      </tr>`;
+    }).join('')}
+  </tbody></table>`;
+}
+
+function renderUnitPhaseTable(units){
+  const area = document.getElementById('unitPhaseArea');
+  if(!area) return;
+  if(units.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị.</div>'; return; }
+  area.innerHTML = `<table><thead><tr>
+    <th>Đơn vị</th>
+    ${PHASES.map(p=>`<th class="num">${p.label} (lũy kế / chỉ tiêu)</th>`).join('')}
+  </tr></thead><tbody>
+  ${units.map(u=>{
+    const cells = PHASES.map(p=>{
+      const t = unitPhaseTarget(u,p.id);
+      const fill = u['cumulativePhase'+p.id] || 0;
+      return `<td class="num">${fmtNum(fill)} / ${fmtNum(t)}</td>`;
+    }).join('');
+    return `<tr><td>${escapeHTML(u.name)}</td>${cells}</tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+function renderUnitManage(){
+  const area = document.getElementById('unitManageArea');
+  if(unitsCache.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị nào — thêm đơn vị đầu tiên bên dưới.</div>'; return; }
+  area.innerHTML = `<table><thead><tr>
+    <th>Đơn vị</th><th class="num">Chỉ tiêu GĐ1</th><th class="num">Chỉ tiêu GĐ2</th><th class="num">Chỉ tiêu GĐ3</th><th class="num">Tổng</th><th></th>
+  </tr></thead><tbody>
+  ${unitsCache.map(u=>`
+    <tr>
+      <td><input type="text" value="${escapeHTML(u.name)}" data-uid="${u.id}" data-field="name" onchange="updateUnitField(this)" style="margin:0;"></td>
+      <td><input type="number" value="${unitPhaseTarget(u,1)}" data-uid="${u.id}" data-field="target1" onchange="updateUnitField(this)" style="margin:0;width:100px;"></td>
+      <td><input type="number" value="${unitPhaseTarget(u,2)}" data-uid="${u.id}" data-field="target2" onchange="updateUnitField(this)" style="margin:0;width:100px;"></td>
+      <td><input type="number" value="${unitPhaseTarget(u,3)}" data-uid="${u.id}" data-field="target3" onchange="updateUnitField(this)" style="margin:0;width:100px;"></td>
+      <td class="num">${fmtNum(unitTotalTarget(u))}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteUnit('${u.id}')">Xóa</button></td>
+    </tr>
+  `).join('')}
+  </tbody></table>`;
+}
+
+async function updateUnitField(el){
+  const uid = el.dataset.uid, field = el.dataset.field;
+  const unit = unitsCache.find(u=>u.id===uid);
+  if(!unit) return;
+  if(field==='name'){
+    unit.name = el.value;
+  } else if(field.startsWith('target')){
+    if(!unit.targets) unit.targets = {1:0,2:0,3:0};
+    const phaseId = Number(field.replace('target',''));
+    unit.targets[phaseId] = Number(el.value||0);
+  }
+  const ok = await setJSON('config:units', true, unitsCache);
+  if(ok){ showToast('Đã cập nhật'); populateUnitSelect(); renderAdmin(); }
+}
+
+async function deleteUnit(uid){
+  if(!confirm('Xóa đơn vị này? Dữ liệu báo cáo của đơn vị sẽ không còn hiển thị trên dashboard.')) return;
+  unitsCache = unitsCache.filter(u=>u.id!==uid);
+  const ok = await setJSON('config:units', true, unitsCache);
+  if(ok){
+    showToast('Đã xóa đơn vị');
+    populateUnitSelect();
+    renderUnitForms();
+    renderUnitHistory();
+    renderAdmin();
+  }
+}
+
+async function resetToOfficialList(){
+  if(!confirm('Thao tác này sẽ THAY THẾ TOÀN BỘ danh sách đơn vị hiện tại bằng danh sách 99 phường/xã và đảng bộ trực thuộc chính thức (chỉ tiêu để 0, có thể sửa lại sau). Dữ liệu báo cáo đã nộp theo tên đơn vị cũ sẽ không còn gắn với đơn vị nào. Tiếp tục?')) return;
+  const fresh = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{1:0,2:0,3:0}}));
+  const ok = await setJSON('config:units', true, fresh);
+  if(ok){
+    unitsCache = fresh;
+    unitDataCache = {};
+    for(const u of unitsCache){ unitDataCache[u.id] = await loadUnitData(u.id); }
+    showToast('Đã nạp danh sách 99 đơn vị chính thức');
+    populateUnitSelect();
+    renderUnitForms();
+    renderUnitHistory();
+    renderAdmin();
+  } else {
+    showToast('Lỗi khi lưu — thử lại');
+  }
+}
+
+async function addUnit(){
+  const nameEl = document.getElementById('newUnitName');
+  const t1El = document.getElementById('newUnitTarget1');
+  const t2El = document.getElementById('newUnitTarget2');
+  const t3El = document.getElementById('newUnitTarget3');
+  const name = nameEl.value.trim();
+  if(!name){ showToast('Nhập tên đơn vị'); return; }
+  const id = 'u' + Date.now();
+  const targets = {1:Number(t1El.value||0), 2:Number(t2El.value||0), 3:Number(t3El.value||0)};
+  unitsCache.push({id, name, targets});
+  const ok = await setJSON('config:units', true, unitsCache);
+  if(ok){
+    unitDataCache[id] = {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+    nameEl.value=''; t1El.value=''; t2El.value=''; t3El.value='';
+    showToast('Đã thêm đơn vị: ' + name);
+    populateUnitSelect();
+    renderUnitManage();
+    renderAdmin();
+  }
+}
+
+function exportCSV(){
+  const rows = [['Đơn vị','Chỉ tiêu GĐ1','Chỉ tiêu GĐ2','Chỉ tiêu GĐ3','Tổng chỉ tiêu','Lũy kế','% hoàn thành','Tổ chức đảng hoàn thành','Cập nhật gần nhất','Trạng thái']];
+  unitsCache.forEach(u=>{
+    const data = unitDataCache[u.id] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+    const latest = getLatestCumulative(data);
+    const cumulative = latest? latest.cumulative : 0;
+    const lastDate = latest ? latest.date.replace(/-28$/,'') : '';
+    const target = unitTotalTarget(u);
+    const pct = target>0 ? ((cumulative/target)*100).toFixed(1) : '0';
+    rows.push([u.name, unitPhaseTarget(u,1), unitPhaseTarget(u,2), unitPhaseTarget(u,3), target, cumulative, pct+'%', (data.completedOrgs||[]).length, lastDate, '']);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tong-hop-tien-do-so-hoa-ho-so-dang-vien.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- Init ---------- */
+window.addEventListener('load', async () => {
+    const MAX_ATTEMPTS = 5;
+    for(let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++){
+      await refreshAll(false);
+      if(!isGSConfigured() || (Array.isArray(unitsCache) && unitsCache.length > 0)) break;
+      if(attempt < MAX_ATTEMPTS){
+        document.getElementById('lastRefresh').textContent =
+          'Đang thử tải lại dữ liệu (lần ' + (attempt+1) + '/' + MAX_ATTEMPTS + ')…';
+        await new Promise(r => setTimeout(r, 1500 * attempt));
+      }
+    }
+
+    setTimeout(() => {
+        renderAdmin();
+    }, 500);
+});
+</script>
+</body>
+</html>
