@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bảng điều khiển số hóa hồ sơ đảng viên</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
@@ -212,6 +217,8 @@ tr:last-child td{border-bottom:none;}
 .unit-manage-row input[type=text]{margin:0;}
 
 .chart-wrap{position:relative;height:280px;}
+.chart-scroll{max-height:720px;overflow-y:auto;overflow-x:hidden;border:1px solid var(--line-soft);border-radius:8px;padding:6px 10px 6px 2px;}
+.chart-wrap-tall{position:relative;width:100%;}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
 .toolbar .right{display:flex;gap:8px;}
@@ -310,7 +317,7 @@ tr:last-child td{border-bottom:none;}
 
     <div class="card">
       <h2>Lộ trình 3 giai đoạn</h2>
-      <p class="sub">Theo Kế hoạch số hóa, tạo lập dữ liệu đảng viên — mục tiêu và thời hạn hoàn thành từng giai đoạn. Số lũy kế Toàn thành phố = tổng số <b>lũy kế báo cáo ngày gần nhất</b> của từng đơn vị. Lũy kế của mỗi đơn vị nay do hệ thống <b>tự cộng dồn</b> từ số hồ sơ hoàn thành mỗi ngày (đơn vị không cần tự gõ số lũy kế) — nên nếu một đơn vị báo sai 1 ngày, chỉ cần sửa/xóa đúng ngày đó ở tab "Báo cáo đơn vị → Lịch sử báo cáo gần đây", các ngày sau sẽ tự tính lại đúng.</p>
+      <p class="sub">Theo Kế hoạch số hóa, tạo lập dữ liệu đảng viên — thời hạn hoàn thành từng giai đoạn theo Kế hoạch; <b>chỉ tiêu số hồ sơ</b> của mỗi giai đoạn lấy theo tổng chỉ tiêu đã giao cho từng đơn vị ở mục "Quản lý đơn vị" bên dưới (không dùng số cố định). Số lũy kế Toàn thành phố = tổng số <b>lũy kế báo cáo ngày gần nhất</b> của từng đơn vị. Lũy kế của mỗi đơn vị nay do hệ thống <b>tự cộng dồn</b> từ số hồ sơ hoàn thành mỗi ngày (đơn vị không cần tự gõ số lũy kế) — nên nếu một đơn vị báo sai 1 ngày, chỉ cần sửa/xóa đúng ngày đó ở tab "Báo cáo đơn vị → Lịch sử báo cáo gần đây", các ngày sau sẽ tự tính lại đúng.</p>
       <div class="roadmap" id="roadmapArea"></div>
     </div>
 
@@ -323,14 +330,17 @@ tr:last-child td{border-bottom:none;}
         <div id="unitChartSummary" class="hint" style="margin-top:10px;"></div>
       </div>
       <div class="card">
-        <h2>So sánh tất cả đơn vị</h2>
-        <p class="sub">So sánh số hồ sơ đã số hóa lũy kế giữa các đơn vị.</p>
-        <div class="chart-wrap"><canvas id="allUnitsChart"></canvas></div>
-      </div>
-      <div class="card">
         <h2>Khó khăn, vướng mắc gần đây</h2>
         <p class="sub">Tổng hợp từ các báo cáo ngày của đơn vị.</p>
         <div id="issuesFeed"><div class="empty-state">Chưa có phản ánh nào.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>So sánh tất cả đơn vị</h2>
+      <p class="sub">So sánh số hồ sơ đã số hóa lũy kế giữa các đơn vị — hiển thị đầy đủ toàn bộ đơn vị (tối đa 99 phường/xã, đảng bộ trực thuộc) trên cùng một biểu đồ, cuộn dọc để xem hết.</p>
+      <div class="chart-scroll" id="allUnitsChartScroll">
+        <div class="chart-wrap-tall" id="allUnitsChartInner"><canvas id="allUnitsChart"></canvas></div>
       </div>
     </div>
 
@@ -524,9 +534,7 @@ async function logDailyReportToSheet(unitName, entry){
     completedPhase3: entry.completedPhase3,
     completedToday: entry.completedToday,
     cumulative: entry.cumulative,
-    pages: entry.pages,
-    issues: entry.issues,
-    bienBanUrl: entry.bienBanUrl
+    issues: entry.issues
   });
 }
 
@@ -565,6 +573,40 @@ async function loadUnitData(unitId){
 }
 async function saveUnitData(unitId, data){
   return await setJSON('unit-data:'+unitId, true, data);
+}
+
+/* ---------- Cache cục bộ trên trình duyệt: hiển thị NGAY dữ liệu lần tải trước
+   trong lúc chờ Google Sheet phản hồi (Apps Script thường mất vài giây), thay vì
+   để màn hình trắng "Đang tải dữ liệu…". Sau khi có dữ liệu mới, trang tự cập
+   nhật lại như bình thường. ---------- */
+const LS_KEY_CACHE = 'btctu_cache_v1';
+function saveLocalCache(){
+  try{
+    localStorage.setItem(LS_KEY_CACHE, JSON.stringify({
+      units: unitsCache, unitData: unitDataCache, savedAt: new Date().toISOString()
+    }));
+  }catch(e){ /* localStorage đầy hoặc bị chặn — bỏ qua, không ảnh hưởng hoạt động chính */ }
+}
+function loadLocalCache(){
+  try{
+    const raw = localStorage.getItem(LS_KEY_CACHE);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || !Array.isArray(parsed.units) || parsed.units.length===0) return null;
+    return parsed;
+  }catch(e){ return null; }
+}
+function renderFromLocalCache(cache){
+  unitsCache = cache.units;
+  unitDataCache = cache.unitData || {};
+  populateUnitSelect();
+  renderUnitForms();
+  renderUnitHistory();
+  renderUnitManage();
+  renderAdmin();
+  const savedDate = new Date(cache.savedAt);
+  const el = document.getElementById('lastRefresh');
+  if(el) el.textContent = 'Đang hiển thị dữ liệu đã lưu lúc ' + savedDate.toLocaleString('vi-VN') + ' — đang tải bản mới nhất…';
 }
 
 /* Lũy kế không còn là số đơn vị tự gõ — hệ thống tự cộng dồn từ số hồ sơ hoàn thành
@@ -649,9 +691,9 @@ async function refreshAll(manual){
       });
     } else {
       // Dự phòng: nếu Apps Script CHƯA được cập nhật (chưa có action getByPrefix),
-      // quay lại cách cũ — tải theo từng nhóm song song để trang vẫn chạy được,
-      // dù chậm hơn.
-      const batchSize = 15;
+      // quay lại cách cũ — tải song song theo từng nhóm để trang vẫn chạy được,
+      // nhóm lớn hơn (25) để giảm số lượt chờ, dù vẫn chậm hơn cách gọi 1 lần ở trên.
+      const batchSize = 25;
       let loadedCount = 0;
       for(let i = 0; i < unitsCache.length; i += batchSize){
         const chunk = unitsCache.slice(i, i + batchSize);
@@ -670,6 +712,7 @@ async function refreshAll(manual){
   renderUnitHistory();
   renderUnitManage();
   renderAdmin();
+  saveLocalCache();
 
   document.getElementById('lastRefresh').textContent =
     'Cập nhật lúc ' + new Date().toLocaleString('vi-VN');
@@ -739,16 +782,11 @@ function renderUnitForms(){
       </div>
       <div class="hint" id="cumulativePreviewHint">Lũy kế trước ngày này: ${fmtNum(prevCumulative)} hồ sơ.</div>
 
-      <label>Số trang đã số hóa trong ngày (không bắt buộc)</label>
-      <input type="number" id="dailyPages" min="0" placeholder="VD: 3200">
       <label>Khó khăn, vướng mắc (không bắt buộc)</label>
       <textarea id="dailyIssues" placeholder="VD: Thiếu máy quét, hồ sơ giấy bị hư hỏng cần xử lý..."></textarea>
       <label>Danh sách tổ chức đảng đã số hóa hoàn thiện trong ngày (mỗi tổ chức một dòng, không bắt buộc)</label>
       <textarea id="dailyOrgs" placeholder="VD:&#10;Chi bộ Ấp 1&#10;Chi bộ Khu phố 3&#10;Đảng bộ bộ phận Trường THCS..."></textarea>
       <div class="hint">Chỉ ghi tên các tổ chức đảng đã số hóa <b>hoàn thiện toàn bộ</b> hồ sơ đảng viên trực thuộc, tính đến ngày báo cáo. Báo nhầm tên tổ chức? Có thể xóa lại ở mục "Lịch sử báo cáo gần đây → Tổ chức đảng đã hoàn thành".</div>
-      <label>Link biên bản làm việc ngày (không bắt buộc)</label>
-      <input type="text" id="dailyBienBan" placeholder="Dán link Google Drive/tài liệu đã chia sẻ...">
-      <div class="hint">Bảng này không lưu được file đính kèm trực tiếp — tải biên bản lên Google Drive (hoặc nơi lưu trữ chung của đơn vị), bật chia sẻ, rồi dán link vào đây.</div>
       <button class="btn btn-primary" onclick="submitDaily()">Nộp báo cáo ngày</button>
     </div>
   `;
@@ -796,13 +834,11 @@ async function submitDaily(){
   const completedPhase2 = Number(document.getElementById('dailyCompleted2').value || 0);
   const completedPhase3 = Number(document.getElementById('dailyCompleted3').value || 0);
   const completedToday = completedPhase1 + completedPhase2 + completedPhase3;
-  const pages = Number(document.getElementById('dailyPages').value || 0);
   const issues = document.getElementById('dailyIssues').value.trim();
   const orgsRaw = document.getElementById('dailyOrgs').value.trim();
-  const bienBanUrl = document.getElementById('dailyBienBan').value.trim();
 
   const data = unitDataCache[uid] || {dailyReports:[],completedOrgs:[]};
-  const entry = {date, completedPhase1, completedPhase2, completedPhase3, completedToday, pages, issues, bienBanUrl, submittedAt: new Date().toISOString()};
+  const entry = {date, completedPhase1, completedPhase2, completedPhase3, completedToday, issues, submittedAt: new Date().toISOString()};
   const existingIdx = data.dailyReports.findIndex(r=>r.date===date);
   if(existingIdx>=0) data.dailyReports[existingIdx] = entry;
   else data.dailyReports.push(entry);
@@ -837,9 +873,7 @@ function editDailyReport(date){
     const el = document.getElementById('dailyCompleted'+p.id);
     if(el) el.value = r['completedPhase'+p.id] || '';
   });
-  document.getElementById('dailyPages').value = r.pages || '';
   document.getElementById('dailyIssues').value = r.issues || '';
-  document.getElementById('dailyBienBan').value = r.bienBanUrl || '';
   document.getElementById('dailyOrgs').value = '';
   updateCumulativePreview();
   showToast('Đã nạp báo cáo ngày ' + date + ' lên form — sửa rồi bấm "Nộp báo cáo ngày" để lưu lại');
@@ -889,7 +923,7 @@ function renderUnitHistory(){
     const rows = [...series].reverse().slice(0,15);
     if(rows.length===0){ area.innerHTML = '<div class="empty-state">Chưa có báo cáo ngày nào.</div>'; return; }
     area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Lũy kế nay do hệ thống <b>tự tính</b> theo ngày (không nhập tay) — nếu 1 ngày bị nhập sai, hãy sửa hoặc xóa ngay dòng đó, các ngày sau sẽ tự tính lại đúng, không cần báo bù ở ngày sau.</div>
-    <table><thead><tr><th>Ngày</th><th class="num">GĐ1</th><th class="num">GĐ2</th><th class="num">GĐ3</th><th class="num">Tổng trong ngày</th><th class="num">Lũy kế</th><th class="num">Số trang</th><th>Khó khăn / vướng mắc</th><th>Biên bản</th><th>Hành động</th></tr></thead><tbody>
+    <table><thead><tr><th>Ngày</th><th class="num">GĐ1</th><th class="num">GĐ2</th><th class="num">GĐ3</th><th class="num">Tổng trong ngày</th><th class="num">Lũy kế</th><th>Khó khăn / vướng mắc</th><th>Hành động</th></tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${r.date}</td>
         <td class="num">${r.completedPhase1!==undefined?fmtNum(r.completedPhase1):'—'}</td>
@@ -897,9 +931,7 @@ function renderUnitHistory(){
         <td class="num">${r.completedPhase3!==undefined?fmtNum(r.completedPhase3):'—'}</td>
         <td class="num">${fmtNum(r.completedToday)}</td>
         <td class="num">${fmtNum(r.cumulative)}</td>
-        <td class="num">${r.pages?fmtNum(r.pages):'—'}</td>
         <td>${r.issues? escapeHTML(r.issues) : '—'}</td>
-        <td>${r.bienBanUrl?`<a href="${escapeHTML(r.bienBanUrl)}" target="_blank" rel="noopener">Xem link</a>`:'—'}</td>
         <td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="editDailyReport('${r.date}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteDailyReport('${r.date}')">Xóa</button></td>
       </tr>`).join('')}
     </tbody></table>`;
@@ -968,7 +1000,7 @@ function renderAdmin(){
 
   const safeRender = (fn, label) => { try{ fn(); }catch(e){ console.error('Lỗi khi vẽ ' + label, e); } };
   safeRender(()=>renderKPIs(totalCumulative, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted), 'KPI');
-  safeRender(()=>renderRoadmap(totalCumulative), 'lộ trình');
+  safeRender(()=>renderRoadmap(totalCumulative, unitsWithStatus), 'lộ trình');
   safeRender(()=>renderIssuesFeed(), 'danh sách vướng mắc');
   safeRender(()=>renderUnitTable(unitsWithStatus), 'bảng đơn vị');
   safeRender(()=>renderUnitPhaseTable(unitsWithStatus), 'bảng theo giai đoạn');
@@ -1005,15 +1037,19 @@ function fmtDate(iso){
   return `${d}/${m}/${y}`;
 }
 
-function renderRoadmap(totalCumulative){
-  let remaining = totalCumulative;
-  const overallPct = TOTAL_TARGET>0 ? Math.min(100, (totalCumulative/TOTAL_TARGET)*100) : 0;
+function renderRoadmap(totalCumulative, units){
   const today = todayISO();
+  // Chỉ tiêu từng giai đoạn = tổng chỉ tiêu đã giao cho các đơn vị (mục "Quản lý đơn vị"),
+  // không dùng số cố định trong Kế hoạch, để lộ trình luôn khớp với chỉ tiêu thực tế đưa ra.
+  const phaseTargets = PHASES.map(p => (units||[]).reduce((s,u)=> s + unitPhaseTarget(u, p.id), 0));
+  const totalTargetAssigned = phaseTargets.reduce((s,t)=>s+t,0);
+  const overallPct = totalTargetAssigned>0 ? Math.min(100, (totalCumulative/totalTargetAssigned)*100) : 0;
 
   const stagesHTML = PHASES.map((p,i)=>{
-    const before = PHASES.slice(0,i).reduce((s,x)=>s+x.target,0);
-    const fillInThisStage = Math.max(0, Math.min(p.target, totalCumulative - before));
-    const pct = p.target>0 ? (fillInThisStage/p.target)*100 : 0;
+    const target = phaseTargets[i];
+    const before = phaseTargets.slice(0,i).reduce((s,t)=>s+t,0);
+    const fillInThisStage = Math.max(0, Math.min(target, totalCumulative - before));
+    const pct = target>0 ? (fillInThisStage/target)*100 : 0;
     const daysLeft = daysBetween(today, p.deadline);
     let badgeClass = 'badge-ontime', badgeText = 'Còn ' + daysLeft + ' ngày';
     if(daysLeft < 0){ badgeClass='badge-late'; badgeText='Đã quá hạn ' + Math.abs(daysLeft) + ' ngày'; }
@@ -1026,7 +1062,7 @@ function renderRoadmap(totalCumulative){
           <span>${p.desc}</span>
         </div>
         <div class="stage-meta">
-          <span class="stage-target">${fmtNum(fillInThisStage)} / ${fmtNum(p.target)} hồ sơ</span>
+          <span class="stage-target">${fmtNum(fillInThisStage)} / ${fmtNum(target)} hồ sơ (chỉ tiêu đã giao)</span>
           <span class="deadline-badge ${badgeClass}">${p.note ? p.note : badgeText}</span>
         </div>
       </div>
@@ -1101,26 +1137,35 @@ function renderUnitChart(units){
 let allUnitsChartInstance = null;
 function renderAllUnitsChart(units){
   const ctx = document.getElementById('allUnitsChart');
+  const inner = document.getElementById('allUnitsChartInner');
   if(!ctx) return;
   if(allUnitsChartInstance) allUnitsChartInstance.destroy();
   if(units.length===0){
     ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    if(inner) inner.style.height = '280px';
     return;
   }
+  // Sắp theo lũy kế giảm dần để dễ so sánh; cột ngang + chiều cao co giãn theo số đơn vị
+  // để hiển thị đầy đủ tới 99 đơn vị trên cùng 1 biểu đồ, cuộn trong khung .chart-scroll.
+  const sorted = [...units].sort((a,b)=> b.cumulative - a.cumulative);
+  const rowHeight = 26;
+  if(inner) inner.style.height = Math.max(280, sorted.length * rowHeight) + 'px';
   allUnitsChartInstance = new Chart(ctx, {
     type:'bar',
     data:{
-      labels: units.map(u=>u.name),
+      labels: sorted.map(u=>u.name),
       datasets:[
-        {label:'Lũy kế', data: units.map(u=>u.cumulative), backgroundColor:'#8F1B2E', borderRadius:4}
+        {label:'Lũy kế', data: sorted.map(u=>u.cumulative), backgroundColor:'#8F1B2E', borderRadius:4},
+        {label:'Chỉ tiêu', data: sorted.map(u=>u.target||0), backgroundColor:'#DCC98E', borderRadius:4}
       ]
     },
     options:{
+      indexAxis:'y',
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter', size:11}}} },
       scales:{
-        x:{ ticks:{font:{family:'Inter', size:10}} },
-        y:{ ticks:{font:{family:'JetBrains Mono', size:10}}, beginAtZero:true }
+        x:{ ticks:{font:{family:'Inter', size:10}}, beginAtZero:true },
+        y:{ ticks:{font:{family:'JetBrains Mono', size:10.5}} }
       }
     }
   });
@@ -1339,6 +1384,12 @@ function exportCSV(){
 
 /* ---------- Init ---------- */
 window.addEventListener('load', async () => {
+    // Hiện ngay dữ liệu đã lưu ở lần tải trước (nếu có) — người dùng thấy dashboard
+    // ngay lập tức thay vì chờ Google Sheet phản hồi. Dữ liệu sẽ được thay bằng bản
+    // mới nhất ngay khi tải xong bên dưới.
+    const cached = loadLocalCache();
+    if(cached) renderFromLocalCache(cached);
+
     const MAX_ATTEMPTS = 5;
     for(let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++){
       await refreshAll(false);
