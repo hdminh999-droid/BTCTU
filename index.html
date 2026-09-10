@@ -237,6 +237,7 @@ th.group-cl{background:var(--gold-soft);}
 /* Ô tìm kiếm đơn vị */
 .search-box{margin-bottom:14px;}
 .search-box input[type=text]{margin-bottom:0;}
+.preview-hint{text-align:center;font-size:14px;color:var(--ink-soft);padding:10px 0 2px;font-style:italic;}
 
 .subtabs{display:flex;gap:6px;margin-bottom:16px;}
 .subtab-btn{
@@ -276,8 +277,6 @@ th.group-cl{background:var(--gold-soft);}
       <button onclick="refreshAll(true)">↻ Làm mới dữ liệu</button>
     </div>
   </div>
-
-  <div class="notice">⚠ Dữ liệu trên bảng này được <b>lưu chung trên Google Sheet</b> (qua Google Apps Script): mọi đơn vị và Ban Tổ chức truy cập cùng đường link sẽ thấy chung một bộ dữ liệu báo cáo, và mỗi báo cáo ngày cũng được tự động ghi vào Sheet để thống kê. Danh sách 99 phường/xã và đảng bộ trực thuộc đã được nạp sẵn (chỉ tiêu = 0) — vào tab "Tổng hợp toàn Thành phố → Quản lý đơn vị" để giao chỉ tiêu theo từng giai đoạn cho từng đơn vị.</div>
 
   <div id="gsStatusBanner"></div>
 
@@ -332,7 +331,6 @@ th.group-cl{background:var(--gold-soft);}
 
     <div class="card">
       <h2>Lộ trình 3 giai đoạn</h2>
-      <p class="sub">Theo Kế hoạch số hóa, tạo lập dữ liệu đảng viên — thời hạn hoàn thành từng giai đoạn theo Kế hoạch; <b>chỉ tiêu số hồ sơ</b> của mỗi giai đoạn lấy theo tổng chỉ tiêu đã giao cho từng đơn vị ở mục "Quản lý đơn vị" bên dưới (không dùng số cố định). Số lũy kế Toàn thành phố = tổng số <b>lũy kế báo cáo ngày gần nhất</b> của từng đơn vị. Lũy kế của mỗi đơn vị nay do hệ thống <b>tự cộng dồn</b> từ số hồ sơ hoàn thành mỗi ngày (đơn vị không cần tự gõ số lũy kế) — nên nếu một đơn vị báo sai 1 ngày, chỉ cần sửa/xóa đúng ngày đó ở tab "Báo cáo đơn vị → Lịch sử báo cáo gần đây", các ngày sau sẽ tự tính lại đúng.</p>
       <div class="roadmap" id="roadmapArea"></div>
     </div>
 
@@ -385,11 +383,10 @@ th.group-cl{background:var(--gold-soft);}
       <div class="toolbar toolbar-top">
         <div>
           <h2 style="margin:0;">Chỉnh lý và Số hóa (Scan) — theo từng đơn vị</h2>
-          <p class="sub" style="margin:4px 0 0;">So sánh riêng số hồ sơ đã <b>chỉnh lý</b> (phân loại, sắp xếp hồ sơ giấy) với số hồ sơ đã <b>số hóa / scan</b> xong, lũy kế theo từng đơn vị. Chỉnh lý thường đi trước số hóa, nên "Chênh lệch" dương (màu vàng) là bình thường — nếu chênh lệch âm (màu đỏ), đơn vị đang số hóa nhanh hơn tốc độ chỉnh lý, cần kiểm tra lại số liệu nhập.</p>
         </div>
         <button class="btn btn-ghost btn-sm" id="toggle-clsh" onclick="toggleCardCollapse('clsh')">Mở rộng ▾</button>
       </div>
-      <div class="collapsible collapsed" id="collapsible-clsh">
+      <div class="collapsible" id="collapsible-clsh">
         <div class="search-box"><input type="text" id="clshSearch" placeholder="🔎 Tìm theo tên đơn vị…" oninput="renderChinhLyVsSoHoaTable(unitsWithStatusCache)"></div>
         <div id="chinhLySoHoaArea"></div>
       </div>
@@ -403,7 +400,7 @@ th.group-cl{background:var(--gold-soft);}
         </div>
         <button class="btn btn-ghost btn-sm" id="toggle-orgs" onclick="toggleCardCollapse('orgs')">Mở rộng ▾</button>
       </div>
-      <div class="collapsible collapsed" id="collapsible-orgs">
+      <div class="collapsible" id="collapsible-orgs">
         <div class="search-box"><input type="text" id="orgsSearch" placeholder="🔎 Tìm theo tên đơn vị…" oninput="renderCompletedOrgsTable(unitsWithStatusCache)"></div>
         <div id="completedOrgsArea"></div>
       </div>
@@ -480,13 +477,18 @@ let unitsWithStatusCache = []; // bản đã tính cumulative/status — dùng �
 let unitChartInstance = null;
 let currentHistoryView = 'daily';
 
-/* ---------- Đóng/mở từng khối (Khó khăn vướng mắc, Chỉnh lý & Số hóa, Danh sách tổ chức đã hoàn thành) ---------- */
+/* ---------- Đóng/mở từng khối (Khó khăn vướng mắc, Chỉnh lý & Số hóa, Danh sách tổ chức đã hoàn thành):
+   ở trạng thái "thu gọn" vẫn hiện sẵn vài dòng đầu, bấm "Mở rộng" mới hiện hết toàn bộ. ---------- */
+const CARD_PREVIEW_COUNT = 5;
+let cardExpanded = { issues:true, clsh:false, orgs:false };
+
 function toggleCardCollapse(key){
-  const body = document.getElementById('collapsible-'+key);
+  cardExpanded[key] = !cardExpanded[key];
   const btn = document.getElementById('toggle-'+key);
-  if(!body || !btn) return;
-  const collapsed = body.classList.toggle('collapsed');
-  btn.textContent = collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴';
+  if(btn) btn.textContent = cardExpanded[key] ? 'Thu gọn ▴' : 'Mở rộng ▾';
+  if(key==='issues') renderIssuesFeed();
+  else if(key==='clsh') renderChinhLyVsSoHoaTable(unitsWithStatusCache);
+  else if(key==='orgs') renderCompletedOrgsTable(unitsWithStatusCache);
 }
 
 /* ---------- Lọc danh sách đơn vị theo ô tìm kiếm (dùng chung cho các bảng theo đơn vị) ---------- */
@@ -496,6 +498,8 @@ function filterUnitsBySearch(units, inputId){
   if(!q) return units;
   return units.filter(u => u.name.toLowerCase().includes(q));
 }
+
+
 
 /* ---------- Chỉ tiêu theo giai đoạn ---------- */
 function unitPhaseTarget(u, phaseId){
@@ -1348,16 +1352,19 @@ function renderIssuesFeed(){
   const searchEl = document.getElementById('issuesSearch');
   const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
   const filtered = q ? all.filter(it=>it.unit.toLowerCase().includes(q)) : all;
-  const top = filtered.slice(0,15);
+  const capped = filtered.slice(0,15);
   const area = document.getElementById('issuesFeed');
   if(all.length===0){ area.innerHTML = '<div class="empty-state">Chưa có phản ánh nào.</div>'; return; }
-  if(top.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
+  if(capped.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
+  const isExpanded = cardExpanded.issues || !!q;
+  const top = isExpanded ? capped : capped.slice(0, CARD_PREVIEW_COUNT);
+  const hiddenCount = capped.length - top.length;
   area.innerHTML = top.map(it=>`
     <div class="issue-item">
       <div class="meta"><b>${escapeHTML(it.unit)}</b> · ${it.date}</div>
       <div class="text">${escapeHTML(it.text)}</div>
     </div>
-  `).join('');
+  `).join('') + (hiddenCount>0 ? `<div class="preview-hint">… còn <b>${hiddenCount}</b> phản ánh khác — bấm "Mở rộng ▾" ở tiêu đề để xem tất cả.</div>` : '');
 }
 
 function renderCompletedOrgsTable(units){
@@ -1374,12 +1381,16 @@ function renderCompletedOrgsTable(units){
   const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
   const matched = q ? all.filter(o=>o.unit.toLowerCase().includes(q)) : all;
   if(matched.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
-  const shown = matched.slice(0,200);
+  const isExpanded = cardExpanded.orgs || !!q;
+  const capped = matched.slice(0,200);
+  const shown = isExpanded ? capped : capped.slice(0, CARD_PREVIEW_COUNT);
+  const hiddenCount = capped.length - shown.length;
   area.innerHTML = `
     <div class="hint" style="margin-bottom:10px;">${q ? `Tìm thấy <b>${matched.length}</b>` : `Tổng cộng <b>${all.length}</b>`} tổ chức đảng đã được báo cáo số hóa hoàn thiện${q?' khớp với từ khóa':' trên toàn Thành phố'}${matched.length>200?' — hiển thị 200 bản ghi gần nhất':''}. Đơn vị báo nhầm tên tổ chức? Bấm "Xóa" ở dòng tương ứng để gỡ khỏi danh sách.</div>
     <table><thead><tr><th>Đơn vị</th><th>Tổ chức đảng</th><th>Ngày xác nhận</th><th>Hành động</th></tr></thead><tbody>
     ${shown.map(o=>`<tr><td>${escapeHTML(o.unit)}</td><td>${escapeHTML(o.name)}</td><td>${o.date}</td><td><button class="btn btn-danger btn-sm" data-org-unit="${escapeHTML(o.unitId)}" data-org-name="${escapeHTML(o.name)}">Xóa</button></td></tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table>
+    ${hiddenCount>0 ? `<div class="preview-hint">… còn <b>${hiddenCount}</b> dòng khác — bấm "Mở rộng ▾" ở tiêu đề để xem tất cả.</div>` : ''}`;
   area.querySelectorAll('[data-org-unit]').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteCompletedOrg(btn.dataset.orgUnit, btn.dataset.orgName));
   });
@@ -1458,10 +1469,13 @@ function renderChinhLyVsSoHoaTable(units){
   const filtered = filterUnitsBySearch(units, 'clshSearch');
   if(filtered.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
   const sorted = [...filtered].sort((a,b)=> (b.cumulativeChinhLy - b.cumulative) - (a.cumulativeChinhLy - a.cumulative));
+  const isExpanded = cardExpanded.clsh || !!document.getElementById('clshSearch')?.value.trim();
+  const rows = isExpanded ? sorted : sorted.slice(0, CARD_PREVIEW_COUNT);
+  const hiddenCount = sorted.length - rows.length;
   area.innerHTML = `<table><thead><tr>
     <th>Đơn vị</th><th class="num">Đã chỉnh lý (lũy kế)</th><th class="num">Đã số hóa / scan (lũy kế)</th><th class="num">Chênh lệch (chỉnh lý − số hóa)</th><th>Tỉ lệ đã số hóa / đã chỉnh lý</th>
   </tr></thead><tbody>
-  ${sorted.map(u=>{
+  ${rows.map(u=>{
     const gap = u.cumulativeChinhLy - u.cumulative;
     const ratio = u.cumulativeChinhLy>0 ? Math.min(100,(u.cumulative/u.cumulativeChinhLy)*100) : (u.cumulative>0 ? 100 : 0);
     const gapCls = gap < 0 ? 'badge-late' : (gap>0 ? 'badge-warn' : 'badge-ontime');
@@ -1473,7 +1487,8 @@ function renderChinhLyVsSoHoaTable(units){
       <td><span class="progress-mini"><div style="width:${ratio}%"></div></span>${ratio.toFixed(0)}%</td>
     </tr>`;
   }).join('')}
-  </tbody></table>`;
+  </tbody></table>
+  ${hiddenCount>0 ? `<div class="preview-hint">… còn <b>${hiddenCount}</b> đơn vị khác — bấm "Mở rộng ▾" ở tiêu đề để xem tất cả.</div>` : ''}`;
 }
 
 function renderUnitManage(){
