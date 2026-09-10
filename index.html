@@ -4,14 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bảng điều khiển số hóa hồ sơ đảng viên</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 :root{
   --bg:#EEF0F2;
@@ -30,9 +27,9 @@
   --danger-soft:#F8E2DE;
   --line:#DCE0E5;
   --line-soft:#EBEDF0;
-  --font-display:'Noto Serif', Georgia, serif;
-  --font-body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:'JetBrains Mono', 'Roboto Mono', monospace;
+  --font-display:'Times New Roman', Times, serif;
+  --font-body:'Times New Roman', Times, serif;
+  --font-mono:'Times New Roman', Times, serif;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
@@ -196,6 +193,15 @@ tr:last-child td{border-bottom:none;}
 .num{font-family:var(--font-mono);text-align:right;}
 .status-pill{font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;display:inline-block;white-space:nowrap;}
 
+/* Bảng lịch sử có header 2 tầng (nhóm Số hóa / Chỉnh lý) — cho cuộn ngang trên màn hình nhỏ */
+.table-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.table-scroll-x table{min-width:900px;}
+th.group-head{text-align:center;font-size:13px;border-bottom:1px solid var(--line-soft);}
+th.sub-head{font-size:12.5px;white-space:nowrap;}
+th.group-sh{background:var(--danger-soft);}
+th.group-cl{background:var(--gold-soft);}
+.table-scroll-x td + td.num, .table-scroll-x th + th.num{border-left:1px dashed var(--line-soft);}
+
 .progress-mini{width:100px;height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;border:1px solid var(--line);display:inline-block;vertical-align:middle;margin-right:8px;}
 .progress-mini > div{height:100%;background:var(--red);}
 
@@ -222,6 +228,15 @@ tr:last-child td{border-bottom:none;}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
 .toolbar .right{display:flex;gap:8px;}
+.toolbar.toolbar-top{align-items:flex-start;margin-bottom:14px;}
+.toolbar.toolbar-top .btn{flex-shrink:0;}
+
+/* Đóng/mở từng khối để trang không bị kéo dài (Khó khăn vướng mắc, Chỉnh lý & Số hóa, Danh sách tổ chức...) */
+.collapsible.collapsed{display:none;}
+
+/* Ô tìm kiếm đơn vị */
+.search-box{margin-bottom:14px;}
+.search-box input[type=text]{margin-bottom:0;}
 
 .subtabs{display:flex;gap:6px;margin-bottom:16px;}
 .subtab-btn{
@@ -330,15 +345,23 @@ tr:last-child td{border-bottom:none;}
         <div id="unitChartSummary" class="hint" style="margin-top:10px;"></div>
       </div>
       <div class="card">
-        <h2>Khó khăn, vướng mắc gần đây</h2>
-        <p class="sub">Tổng hợp từ các báo cáo ngày của đơn vị.</p>
-        <div id="issuesFeed"><div class="empty-state">Chưa có phản ánh nào.</div></div>
+        <div class="toolbar toolbar-top">
+          <div>
+            <h2 style="margin:0;">Khó khăn, vướng mắc gần đây</h2>
+            <p class="sub" style="margin:4px 0 0;">Tổng hợp từ các báo cáo ngày của đơn vị.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="toggle-issues" onclick="toggleCardCollapse('issues')">Thu gọn ▴</button>
+        </div>
+        <div class="collapsible" id="collapsible-issues">
+          <div class="search-box"><input type="text" id="issuesSearch" placeholder="🔎 Tìm theo tên đơn vị…" oninput="renderIssuesFeed()"></div>
+          <div id="issuesFeed"><div class="empty-state">Chưa có phản ánh nào.</div></div>
+        </div>
       </div>
     </div>
 
     <div class="card">
       <h2>So sánh tất cả đơn vị</h2>
-      <p class="sub">So sánh số hồ sơ đã số hóa lũy kế giữa các đơn vị — hiển thị đầy đủ toàn bộ đơn vị (tối đa 99 phường/xã, đảng bộ trực thuộc) trên cùng một biểu đồ, cuộn dọc để xem hết.</p>
+      <p class="sub">So sánh số hồ sơ đã <b>số hóa (scan)</b>, đã <b>chỉnh lý</b>, và <b>chỉ tiêu</b> lũy kế giữa các đơn vị — hiển thị đầy đủ toàn bộ đơn vị (tối đa 99 phường/xã, đảng bộ trực thuộc) trên cùng một biểu đồ, cuộn dọc để xem hết.</p>
       <div class="chart-scroll" id="allUnitsChartScroll">
         <div class="chart-wrap-tall" id="allUnitsChartInner"><canvas id="allUnitsChart"></canvas></div>
       </div>
@@ -359,9 +382,31 @@ tr:last-child td{border-bottom:none;}
     </div>
 
     <div class="card">
-      <h2>Danh sách tổ chức đảng đã số hóa hoàn thiện</h2>
-      <p class="sub">Tổng hợp từ danh sách các đơn vị gửi kèm báo cáo ngày và báo cáo tháng.</p>
-      <div id="completedOrgsArea"></div>
+      <div class="toolbar toolbar-top">
+        <div>
+          <h2 style="margin:0;">Chỉnh lý và Số hóa (Scan) — theo từng đơn vị</h2>
+          <p class="sub" style="margin:4px 0 0;">So sánh riêng số hồ sơ đã <b>chỉnh lý</b> (phân loại, sắp xếp hồ sơ giấy) với số hồ sơ đã <b>số hóa / scan</b> xong, lũy kế theo từng đơn vị. Chỉnh lý thường đi trước số hóa, nên "Chênh lệch" dương (màu vàng) là bình thường — nếu chênh lệch âm (màu đỏ), đơn vị đang số hóa nhanh hơn tốc độ chỉnh lý, cần kiểm tra lại số liệu nhập.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="toggle-clsh" onclick="toggleCardCollapse('clsh')">Mở rộng ▾</button>
+      </div>
+      <div class="collapsible collapsed" id="collapsible-clsh">
+        <div class="search-box"><input type="text" id="clshSearch" placeholder="🔎 Tìm theo tên đơn vị…" oninput="renderChinhLyVsSoHoaTable(unitsWithStatusCache)"></div>
+        <div id="chinhLySoHoaArea"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar toolbar-top">
+        <div>
+          <h2 style="margin:0;">Danh sách tổ chức đảng đã số hóa hoàn thiện</h2>
+          <p class="sub" style="margin:4px 0 0;">Tổng hợp từ danh sách các đơn vị gửi kèm báo cáo ngày và báo cáo tháng.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="toggle-orgs" onclick="toggleCardCollapse('orgs')">Mở rộng ▾</button>
+      </div>
+      <div class="collapsible collapsed" id="collapsible-orgs">
+        <div class="search-box"><input type="text" id="orgsSearch" placeholder="🔎 Tìm theo tên đơn vị…" oninput="renderCompletedOrgsTable(unitsWithStatusCache)"></div>
+        <div id="completedOrgsArea"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -431,8 +476,26 @@ const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padS
 
 let unitsCache = [];
 let unitDataCache = {}; // unitId -> {dailyReports:[], monthlyNotes:[], completedOrgs:[]}
+let unitsWithStatusCache = []; // bản đã tính cumulative/status — dùng để ô tìm kiếm tự render lại
 let unitChartInstance = null;
 let currentHistoryView = 'daily';
+
+/* ---------- Đóng/mở từng khối (Khó khăn vướng mắc, Chỉnh lý & Số hóa, Danh sách tổ chức đã hoàn thành) ---------- */
+function toggleCardCollapse(key){
+  const body = document.getElementById('collapsible-'+key);
+  const btn = document.getElementById('toggle-'+key);
+  if(!body || !btn) return;
+  const collapsed = body.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Mở rộng ▾' : 'Thu gọn ▴';
+}
+
+/* ---------- Lọc danh sách đơn vị theo ô tìm kiếm (dùng chung cho các bảng theo đơn vị) ---------- */
+function filterUnitsBySearch(units, inputId){
+  const el = document.getElementById(inputId);
+  const q = el ? el.value.trim().toLowerCase() : '';
+  if(!q) return units;
+  return units.filter(u => u.name.toLowerCase().includes(q));
+}
 
 /* ---------- Chỉ tiêu theo giai đoạn ---------- */
 function unitPhaseTarget(u, phaseId){
@@ -534,6 +597,11 @@ async function logDailyReportToSheet(unitName, entry){
     completedPhase3: entry.completedPhase3,
     completedToday: entry.completedToday,
     cumulative: entry.cumulative,
+    chinhLyPhase1: entry.chinhLyPhase1,
+    chinhLyPhase2: entry.chinhLyPhase2,
+    chinhLyPhase3: entry.chinhLyPhase3,
+    chinhLyToday: entry.chinhLyToday,
+    cumulativeChinhLy: entry.cumulativeChinhLy,
     issues: entry.issues
   });
 }
@@ -616,6 +684,7 @@ function renderFromLocalCache(cache){
 function computeCumulativeSeries(dailyReports){
   const sorted = [...(dailyReports||[])].sort((a,b)=>a.date.localeCompare(b.date));
   let c1=0, c2=0, c3=0, legacyTotal=0;
+  let cl1=0, cl2=0, cl3=0;
   return sorted.map(r=>{
     const hasPhaseSplit = (r.completedPhase1!==undefined || r.completedPhase2!==undefined || r.completedPhase3!==undefined);
     if(hasPhaseSplit){
@@ -625,7 +694,15 @@ function computeCumulativeSeries(dailyReports){
     } else {
       legacyTotal += (r.completedToday||0);
     }
-    return {...r, cumulativePhase1:c1, cumulativePhase2:c2, cumulativePhase3:c3, cumulative:c1+c2+c3+legacyTotal};
+    // Chỉnh lý (phân loại, sắp xếp hồ sơ giấy) là số liệu bổ sung, độc lập với số hóa (scan) —
+    // báo cáo cũ không có sẽ tự hiểu là 0, không ảnh hưởng tới lũy kế số hóa ở trên.
+    cl1 += (r.chinhLyPhase1||0);
+    cl2 += (r.chinhLyPhase2||0);
+    cl3 += (r.chinhLyPhase3||0);
+    return {...r,
+      cumulativePhase1:c1, cumulativePhase2:c2, cumulativePhase3:c3, cumulative:c1+c2+c3+legacyTotal,
+      cumulativeChinhLyPhase1:cl1, cumulativeChinhLyPhase2:cl2, cumulativeChinhLyPhase3:cl3, cumulativeChinhLy:cl1+cl2+cl3
+    };
   });
 }
 
@@ -633,7 +710,11 @@ function getLatestCumulative(unitData){
   const series = computeCumulativeSeries(unitData.dailyReports);
   if(series.length===0) return null;
   const last = series[series.length-1];
-  return {cumulative:last.cumulative, cumulativePhase1:last.cumulativePhase1, cumulativePhase2:last.cumulativePhase2, cumulativePhase3:last.cumulativePhase3, date:last.date, source:'daily'};
+  return {
+    cumulative:last.cumulative, cumulativePhase1:last.cumulativePhase1, cumulativePhase2:last.cumulativePhase2, cumulativePhase3:last.cumulativePhase3,
+    cumulativeChinhLy:last.cumulativeChinhLy, cumulativeChinhLyPhase1:last.cumulativeChinhLyPhase1, cumulativeChinhLyPhase2:last.cumulativeChinhLyPhase2, cumulativeChinhLyPhase3:last.cumulativeChinhLyPhase3,
+    date:last.date, source:'daily'
+  };
 }
 
 function computeMonthlyStats(dailyReports){
@@ -641,11 +722,26 @@ function computeMonthlyStats(dailyReports){
   const byMonth = {};
   series.forEach(r=>{
     const month = r.date.slice(0,7);
-    if(!byMonth[month]) byMonth[month] = {month, completedMonth:0, cumulative:0, daysReported:0, lastDate:r.date};
-    byMonth[month].completedMonth += (r.completedToday||0);
-    byMonth[month].cumulative = r.cumulative;
-    byMonth[month].lastDate = r.date;
-    byMonth[month].daysReported += 1;
+    if(!byMonth[month]) byMonth[month] = {
+      month, daysReported:0, lastDate:r.date,
+      completedMonth:0, completedPhase1Month:0, completedPhase2Month:0, completedPhase3Month:0,
+      cumulative:0, cumulativePhase1:0, cumulativePhase2:0, cumulativePhase3:0,
+      chinhLyMonth:0, chinhLyPhase1Month:0, chinhLyPhase2Month:0, chinhLyPhase3Month:0,
+      cumulativeChinhLy:0, cumulativeChinhLyPhase1:0, cumulativeChinhLyPhase2:0, cumulativeChinhLyPhase3:0
+    };
+    const m = byMonth[month];
+    m.completedMonth += (r.completedToday||0);
+    m.completedPhase1Month += (r.completedPhase1||0);
+    m.completedPhase2Month += (r.completedPhase2||0);
+    m.completedPhase3Month += (r.completedPhase3||0);
+    m.cumulative = r.cumulative; m.cumulativePhase1 = r.cumulativePhase1; m.cumulativePhase2 = r.cumulativePhase2; m.cumulativePhase3 = r.cumulativePhase3;
+    m.chinhLyMonth += ((r.chinhLyPhase1||0)+(r.chinhLyPhase2||0)+(r.chinhLyPhase3||0));
+    m.chinhLyPhase1Month += (r.chinhLyPhase1||0);
+    m.chinhLyPhase2Month += (r.chinhLyPhase2||0);
+    m.chinhLyPhase3Month += (r.chinhLyPhase3||0);
+    m.cumulativeChinhLy = r.cumulativeChinhLy; m.cumulativeChinhLyPhase1 = r.cumulativeChinhLyPhase1; m.cumulativeChinhLyPhase2 = r.cumulativeChinhLyPhase2; m.cumulativeChinhLyPhase3 = r.cumulativeChinhLyPhase3;
+    m.lastDate = r.date;
+    m.daysReported += 1;
   });
   return Object.values(byMonth).sort((a,b)=> a.month.localeCompare(b.month));
 }
@@ -766,11 +862,22 @@ function renderUnitForms(){
   area.innerHTML = `
     <div class="card">
       <h2>Báo cáo hằng ngày</h2>
-      <p class="sub">Nộp số liệu số hóa trong ngày cho đơn vị đã chọn. Nhập số hồ sơ hoàn thành hôm nay <b>theo từng giai đoạn</b> (đúng theo thành phần hồ sơ của mỗi giai đoạn) — hệ thống tự cộng lũy kế theo ngày, đơn vị không cần tự tính hoặc tự gõ số lũy kế. Kết quả tháng cũng được <b>hệ thống tự động tổng hợp</b> từ các báo cáo ngày.</p>
+      <p class="sub">Nộp số liệu trong ngày cho đơn vị đã chọn — nhập <b>riêng</b> số hồ sơ đã chỉnh lý (phân loại, sắp xếp hồ sơ giấy) và số hồ sơ đã số hóa (scan) xong, theo từng giai đoạn. Hệ thống tự cộng lũy kế theo ngày cho cả 2 số liệu, đơn vị không cần tự tính. Kết quả tháng cũng được <b>hệ thống tự động tổng hợp</b> từ các báo cáo ngày.</p>
       <label>Ngày</label>
       <input type="date" id="dailyDate" value="${todayISO()}" onchange="updateCumulativePreview()">
 
-      <label>Số hồ sơ hoàn thành trong ngày — theo thành phần hồ sơ của từng giai đoạn</label>
+      <label>Số hồ sơ đã CHỈNH LÝ xong trong ngày (phân loại, sắp xếp hồ sơ giấy) — theo từng giai đoạn</label>
+      <div class="field-row-3">
+        ${PHASES.map(p=>`
+          <div class="phase-cell">
+            <p class="phase-label">${escapeHTML(p.label)}</p>
+            <p class="phase-desc">${escapeHTML(p.desc)}</p>
+            <input type="number" id="dailyChinhLy${p.id}" min="0" placeholder="0" oninput="updateCumulativePreview()">
+          </div>
+        `).join('')}
+      </div>
+
+      <label>Số hồ sơ đã SỐ HÓA (SCAN) xong trong ngày — theo thành phần hồ sơ của từng giai đoạn</label>
       <div class="field-row-3">
         ${PHASES.map(p=>`
           <div class="phase-cell">
@@ -802,12 +909,15 @@ function updateCumulativePreview(){
   const series = computeCumulativeSeries(data.dailyReports);
   const before = series.filter(r=>r.date < date);
   const prevTotal = before.length ? before[before.length-1].cumulative : 0;
-  let todayTotal = 0;
+  const prevChinhLy = before.length ? before[before.length-1].cumulativeChinhLy : 0;
+  let todayTotal = 0, todayChinhLy = 0;
   PHASES.forEach(p=>{
     const el = document.getElementById('dailyCompleted'+p.id);
     if(el) todayTotal += Number(el.value || 0);
+    const elCL = document.getElementById('dailyChinhLy'+p.id);
+    if(elCL) todayChinhLy += Number(elCL.value || 0);
   });
-  hintEl.innerHTML = `Lũy kế trước ngày ${date}: <b>${fmtNum(prevTotal)}</b> hồ sơ. Hoàn thành hôm nay (3 giai đoạn): <b>${fmtNum(todayTotal)}</b> hồ sơ. → <b>Lũy kế sau khi nộp: ${fmtNum(prevTotal+todayTotal)}</b> hồ sơ — hệ thống tự tính, không cần tự gõ.`;
+  hintEl.innerHTML = `Lũy kế SỐ HÓA trước ngày ${date}: <b>${fmtNum(prevTotal)}</b> hồ sơ, hôm nay <b>${fmtNum(todayTotal)}</b> → sau khi nộp: <b>${fmtNum(prevTotal+todayTotal)}</b> hồ sơ.<br>Lũy kế CHỈNH LÝ trước ngày ${date}: <b>${fmtNum(prevChinhLy)}</b> hồ sơ, hôm nay <b>${fmtNum(todayChinhLy)}</b> → sau khi nộp: <b>${fmtNum(prevChinhLy+todayChinhLy)}</b> hồ sơ. (Hệ thống tự tính, không cần tự gõ.)`;
 }
 
 function mergeCompletedOrgs(data, rawText, date, source){
@@ -834,11 +944,15 @@ async function submitDaily(){
   const completedPhase2 = Number(document.getElementById('dailyCompleted2').value || 0);
   const completedPhase3 = Number(document.getElementById('dailyCompleted3').value || 0);
   const completedToday = completedPhase1 + completedPhase2 + completedPhase3;
+  const chinhLyPhase1 = Number(document.getElementById('dailyChinhLy1').value || 0);
+  const chinhLyPhase2 = Number(document.getElementById('dailyChinhLy2').value || 0);
+  const chinhLyPhase3 = Number(document.getElementById('dailyChinhLy3').value || 0);
+  const chinhLyToday = chinhLyPhase1 + chinhLyPhase2 + chinhLyPhase3;
   const issues = document.getElementById('dailyIssues').value.trim();
   const orgsRaw = document.getElementById('dailyOrgs').value.trim();
 
   const data = unitDataCache[uid] || {dailyReports:[],completedOrgs:[]};
-  const entry = {date, completedPhase1, completedPhase2, completedPhase3, completedToday, issues, submittedAt: new Date().toISOString()};
+  const entry = {date, completedPhase1, completedPhase2, completedPhase3, completedToday, chinhLyPhase1, chinhLyPhase2, chinhLyPhase3, chinhLyToday, issues, submittedAt: new Date().toISOString()};
   const existingIdx = data.dailyReports.findIndex(r=>r.date===date);
   if(existingIdx>=0) data.dailyReports[existingIdx] = entry;
   else data.dailyReports.push(entry);
@@ -852,8 +966,12 @@ async function submitDaily(){
     const unit = unitsCache.find(u=>u.id===uid);
     const series = computeCumulativeSeries(data.dailyReports);
     const savedRow = series.find(r=>r.date===date);
-    logDailyReportToSheet(unit ? unit.name : uid, {...entry, cumulative: savedRow ? savedRow.cumulative : completedToday}); // ghi thêm 1 dòng vào sheet "BaoCaoNgay" để thống kê
-    showToast('Đã nộp báo cáo ngày ' + date);
+    logDailyReportToSheet(unit ? unit.name : uid, {...entry, cumulative: savedRow ? savedRow.cumulative : completedToday, cumulativeChinhLy: savedRow ? savedRow.cumulativeChinhLy : chinhLyToday}); // ghi thêm 1 dòng vào sheet "BaoCaoNgay" để thống kê
+    if(chinhLyToday < completedToday){
+      showToast('Đã nộp — lưu ý: số đã CHỈNH LÝ trong ngày (' + fmtNum(chinhLyToday) + ') đang thấp hơn số đã SỐ HÓA (' + fmtNum(completedToday) + '), kiểm tra lại nếu nhập nhầm');
+    } else {
+      showToast('Đã nộp báo cáo ngày ' + date);
+    }
     renderUnitForms();
     renderUnitHistory();
     renderAdmin();
@@ -872,6 +990,8 @@ function editDailyReport(date){
   PHASES.forEach(p=>{
     const el = document.getElementById('dailyCompleted'+p.id);
     if(el) el.value = r['completedPhase'+p.id] || '';
+    const elCL = document.getElementById('dailyChinhLy'+p.id);
+    if(elCL) elCL.value = r['chinhLyPhase'+p.id] || '';
   });
   document.getElementById('dailyIssues').value = r.issues || '';
   document.getElementById('dailyOrgs').value = '';
@@ -922,26 +1042,67 @@ function renderUnitHistory(){
     const series = computeCumulativeSeries(data.dailyReports);
     const rows = [...series].reverse().slice(0,15);
     if(rows.length===0){ area.innerHTML = '<div class="empty-state">Chưa có báo cáo ngày nào.</div>'; return; }
-    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Lũy kế nay do hệ thống <b>tự tính</b> theo ngày (không nhập tay) — nếu 1 ngày bị nhập sai, hãy sửa hoặc xóa ngay dòng đó, các ngày sau sẽ tự tính lại đúng, không cần báo bù ở ngày sau.</div>
-    <table><thead><tr><th>Ngày</th><th class="num">GĐ1</th><th class="num">GĐ2</th><th class="num">GĐ3</th><th class="num">Tổng trong ngày</th><th class="num">Lũy kế</th><th>Khó khăn / vướng mắc</th><th>Hành động</th></tr></thead><tbody>
+    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Lũy kế nay do hệ thống <b>tự tính</b> theo ngày (không nhập tay) — nếu 1 ngày bị nhập sai, hãy sửa hoặc xóa ngay dòng đó, các ngày sau sẽ tự tính lại đúng, không cần báo bù ở ngày sau. Mỗi nhóm "Đã số hóa" / "Đã chỉnh lý" đều tách riêng theo 3 giai đoạn.</div>
+    <div class="table-scroll-x"><table><thead>
+      <tr>
+        <th rowspan="2">Ngày</th>
+        <th colspan="5" class="group-head group-sh">Đã số hóa (scan)</th>
+        <th colspan="5" class="group-head group-cl">Đã chỉnh lý</th>
+        <th rowspan="2">Khó khăn / vướng mắc</th>
+        <th rowspan="2">Hành động</th>
+      </tr>
+      <tr>
+        <th class="num sub-head group-sh">GĐ1</th><th class="num sub-head group-sh">GĐ2</th><th class="num sub-head group-sh">GĐ3</th><th class="num sub-head group-sh">Hôm nay</th><th class="num sub-head group-sh">Lũy kế</th>
+        <th class="num sub-head group-cl">GĐ1</th><th class="num sub-head group-cl">GĐ2</th><th class="num sub-head group-cl">GĐ3</th><th class="num sub-head group-cl">Hôm nay</th><th class="num sub-head group-cl">Lũy kế</th>
+      </tr>
+    </thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${r.date}</td>
         <td class="num">${r.completedPhase1!==undefined?fmtNum(r.completedPhase1):'—'}</td>
         <td class="num">${r.completedPhase2!==undefined?fmtNum(r.completedPhase2):'—'}</td>
         <td class="num">${r.completedPhase3!==undefined?fmtNum(r.completedPhase3):'—'}</td>
-        <td class="num">${fmtNum(r.completedToday)}</td>
+        <td class="num"><b>${fmtNum(r.completedToday)}</b></td>
         <td class="num">${fmtNum(r.cumulative)}</td>
+        <td class="num">${r.chinhLyPhase1!==undefined?fmtNum(r.chinhLyPhase1):'—'}</td>
+        <td class="num">${r.chinhLyPhase2!==undefined?fmtNum(r.chinhLyPhase2):'—'}</td>
+        <td class="num">${r.chinhLyPhase3!==undefined?fmtNum(r.chinhLyPhase3):'—'}</td>
+        <td class="num"><b>${r.chinhLyToday!==undefined?fmtNum(r.chinhLyToday):'—'}</b></td>
+        <td class="num">${fmtNum(r.cumulativeChinhLy)}</td>
         <td>${r.issues? escapeHTML(r.issues) : '—'}</td>
         <td style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="editDailyReport('${r.date}')">Sửa</button> <button class="btn btn-danger btn-sm" onclick="deleteDailyReport('${r.date}')">Xóa</button></td>
       </tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table></div>`;
   } else if(currentHistoryView==='monthly') {
     const rows = [...computeMonthlyStats(data.dailyReports)].reverse().slice(0,12);
     if(rows.length===0){ area.innerHTML = '<div class="empty-state">Chưa có báo cáo ngày nào để tổng hợp theo tháng.</div>'; return; }
-    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Số liệu tháng được <b>tự động tổng hợp</b> từ các báo cáo ngày của đơn vị — không cần nộp báo cáo tháng riêng.</div>
-      <table><thead><tr><th>Tháng</th><th class="num">Hoàn thành trong tháng</th><th class="num">Lũy kế cuối tháng</th><th class="num">Số ngày có báo cáo</th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td>${r.month}</td><td class="num">${fmtNum(r.completedMonth)}</td><td class="num">${fmtNum(r.cumulative)}</td><td class="num">${r.daysReported}</td></tr>`).join('')}
-    </tbody></table>`;
+    area.innerHTML = `<div class="hint" style="margin-bottom:10px;">Số liệu tháng được <b>tự động tổng hợp</b> từ các báo cáo ngày của đơn vị — không cần nộp báo cáo tháng riêng. Mỗi nhóm đều tách riêng theo 3 giai đoạn.</div>
+      <div class="table-scroll-x"><table><thead>
+        <tr>
+          <th rowspan="2">Tháng</th>
+          <th colspan="5" class="group-head group-sh">Đã số hóa (scan)</th>
+          <th colspan="5" class="group-head group-cl">Đã chỉnh lý</th>
+          <th rowspan="2">Số ngày có báo cáo</th>
+        </tr>
+        <tr>
+          <th class="num sub-head group-sh">GĐ1</th><th class="num sub-head group-sh">GĐ2</th><th class="num sub-head group-sh">GĐ3</th><th class="num sub-head group-sh">Trong tháng</th><th class="num sub-head group-sh">Lũy kế cuối tháng</th>
+          <th class="num sub-head group-cl">GĐ1</th><th class="num sub-head group-cl">GĐ2</th><th class="num sub-head group-cl">GĐ3</th><th class="num sub-head group-cl">Trong tháng</th><th class="num sub-head group-cl">Lũy kế cuối tháng</th>
+        </tr>
+      </thead><tbody>
+      ${rows.map(r=>`<tr>
+        <td>${r.month}</td>
+        <td class="num">${fmtNum(r.completedPhase1Month)}</td>
+        <td class="num">${fmtNum(r.completedPhase2Month)}</td>
+        <td class="num">${fmtNum(r.completedPhase3Month)}</td>
+        <td class="num"><b>${fmtNum(r.completedMonth)}</b></td>
+        <td class="num">${fmtNum(r.cumulative)}</td>
+        <td class="num">${fmtNum(r.chinhLyPhase1Month)}</td>
+        <td class="num">${fmtNum(r.chinhLyPhase2Month)}</td>
+        <td class="num">${fmtNum(r.chinhLyPhase3Month)}</td>
+        <td class="num"><b>${fmtNum(r.chinhLyMonth)}</b></td>
+        <td class="num">${fmtNum(r.cumulativeChinhLy)}</td>
+        <td class="num">${r.daysReported}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
   } else {
     const orgs = [...(data.completedOrgs||[])].reverse();
     if(orgs.length===0){ area.innerHTML = '<div class="empty-state">Chưa ghi nhận tổ chức đảng nào hoàn thành số hóa.</div>'; return; }
@@ -976,6 +1137,7 @@ function renderAdmin(){
     const cumulativePhase1 = latest ? latest.cumulativePhase1 : 0;
     const cumulativePhase2 = latest ? latest.cumulativePhase2 : 0;
     const cumulativePhase3 = latest ? latest.cumulativePhase3 : 0;
+    const cumulativeChinhLy = latest ? latest.cumulativeChinhLy : 0;
     const lastDate = latest ? latest.date : null;
     const gapDays = lastDate ? daysBetween(lastDate, todayISO()) : null;
     let status = 'never';
@@ -986,10 +1148,12 @@ function renderAdmin(){
     }
     const target = unitTotalTarget(u);
     const pct = target>0 ? Math.min(100, (cumulative/target)*100) : 0;
-    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
+    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, cumulativeChinhLy, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
   });
+  unitsWithStatusCache = unitsWithStatus; // để các ô tìm kiếm tự render lại khi gõ, không cần tính lại từ đầu
 
   const totalCumulative = unitsWithStatus.reduce((s,u)=>s+u.cumulative,0);
+  const totalChinhLy = unitsWithStatus.reduce((s,u)=>s+u.cumulativeChinhLy,0);
   const totalTargetAssigned = unitsWithStatus.reduce((s,u)=>s+ (u.target||0), 0);
   const totalOrgsCompleted = unitsWithStatus.reduce((s,u)=>s+u.orgsCount,0);
   const reportedToday = unitsWithStatus.filter(u=>{
@@ -999,25 +1163,27 @@ function renderAdmin(){
   const staleUnits = unitsWithStatus.filter(u=>u.status==='late' || u.status==='never').length;
 
   const safeRender = (fn, label) => { try{ fn(); }catch(e){ console.error('Lỗi khi vẽ ' + label, e); } };
-  safeRender(()=>renderKPIs(totalCumulative, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted), 'KPI');
+  safeRender(()=>renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted), 'KPI');
   safeRender(()=>renderRoadmap(totalCumulative, unitsWithStatus), 'lộ trình');
   safeRender(()=>renderIssuesFeed(), 'danh sách vướng mắc');
   safeRender(()=>renderUnitTable(unitsWithStatus), 'bảng đơn vị');
   safeRender(()=>renderUnitPhaseTable(unitsWithStatus), 'bảng theo giai đoạn');
+  safeRender(()=>renderChinhLyVsSoHoaTable(unitsWithStatus), 'bảng chỉnh lý và số hóa');
   safeRender(()=>renderCompletedOrgsTable(unitsWithStatus), 'bảng tổ chức đảng hoàn thành');
   safeRender(()=>renderUnitManage(), 'quản lý đơn vị');
   safeRender(()=>renderUnitChart(unitsWithStatus), 'biểu đồ đơn vị được chọn');
   safeRender(()=>renderAllUnitsChart(unitsWithStatus), 'biểu đồ so sánh tất cả đơn vị');
 }
 
-function renderKPIs(totalCumulative, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted){
+function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted){
   const phaseIdx = currentPhaseIndex();
   const phase = PHASES[phaseIdx];
   const cumulativeTargetToPhase = PHASES.slice(0,phaseIdx+1).reduce((s,p)=>s+p.target,0);
   const daysLeft = daysBetween(todayISO(), phase.deadline);
 
   const kpis = [
-    {label:'Tổng lũy kế toàn Thành phố', value: fmtNum(totalCumulative), extra: `/ ${fmtNum(TOTAL_TARGET)} hồ sơ (mục tiêu chung)`},
+    {label:'Tổng lũy kế đã SỐ HÓA (SCAN) toàn Thành phố', value: fmtNum(totalCumulative), extra: `/ ${fmtNum(TOTAL_TARGET)} hồ sơ (mục tiêu chung)`},
+    {label:'Tổng lũy kế đã CHỈNH LÝ toàn Thành phố', value: fmtNum(totalChinhLy), extra: totalChinhLy>0 ? `${((totalCumulative/totalChinhLy)*100).toFixed(0)}% số đã chỉnh lý đã được số hóa` : 'Chưa có số liệu chỉnh lý'},
     {label:'Tổ chức đảng đã số hóa hoàn thiện', value: fmtNum(totalOrgsCompleted), extra: 'chi bộ / đảng bộ bộ phận đã báo cáo xong'},
     {label:'Đơn vị đã báo cáo hôm nay', value: `${reportedToday}`, extra: `/ ${unitCount} đơn vị`},
     {label:phase.label + ' — còn lại', value: daysLeft>=0? daysLeft+' ngày' : 'Quá hạn', extra: 'đến hạn ' + fmtDate(phase.deadline)},
@@ -1124,7 +1290,7 @@ function renderUnitChart(units){
     data:{ labels, datasets:[{ data: dataValues, backgroundColor: colors, borderWidth:0 }] },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter', size:12}}} }
+      plugins:{ legend:{position:'bottom', labels:{font:{family:"'Times New Roman', Times, serif", size:13}}} }
     }
   });
 
@@ -1148,24 +1314,25 @@ function renderAllUnitsChart(units){
   // Sắp theo lũy kế giảm dần để dễ so sánh; cột ngang + chiều cao co giãn theo số đơn vị
   // để hiển thị đầy đủ tới 99 đơn vị trên cùng 1 biểu đồ, cuộn trong khung .chart-scroll.
   const sorted = [...units].sort((a,b)=> b.cumulative - a.cumulative);
-  const rowHeight = 26;
+  const rowHeight = 34;
   if(inner) inner.style.height = Math.max(280, sorted.length * rowHeight) + 'px';
   allUnitsChartInstance = new Chart(ctx, {
     type:'bar',
     data:{
       labels: sorted.map(u=>u.name),
       datasets:[
-        {label:'Lũy kế', data: sorted.map(u=>u.cumulative), backgroundColor:'#8F1B2E', borderRadius:4},
+        {label:'Đã số hóa (scan)', data: sorted.map(u=>u.cumulative), backgroundColor:'#8F1B2E', borderRadius:4},
+        {label:'Đã chỉnh lý', data: sorted.map(u=>u.cumulativeChinhLy||0), backgroundColor:'#A9781F', borderRadius:4},
         {label:'Chỉ tiêu', data: sorted.map(u=>u.target||0), backgroundColor:'#DCC98E', borderRadius:4}
       ]
     },
     options:{
       indexAxis:'y',
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom', labels:{font:{family:'Inter', size:11}}} },
+      plugins:{ legend:{position:'bottom', labels:{font:{family:"'Times New Roman', Times, serif", size:12}}} },
       scales:{
-        x:{ ticks:{font:{family:'Inter', size:10}}, beginAtZero:true },
-        y:{ ticks:{font:{family:'JetBrains Mono', size:10.5}} }
+        x:{ ticks:{font:{family:"'Times New Roman', Times, serif", size:11}}, beginAtZero:true },
+        y:{ ticks:{font:{family:"'Times New Roman', Times, serif", size:12}} }
       }
     }
   });
@@ -1178,9 +1345,13 @@ function renderIssuesFeed(){
     data.dailyReports.forEach(r=>{ if(r.issues) all.push({unit:u.name, date:r.date, text:r.issues, type:'Báo cáo ngày'}); });
   });
   all.sort((a,b)=> b.date.localeCompare(a.date));
-  const top = all.slice(0,15);
+  const searchEl = document.getElementById('issuesSearch');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const filtered = q ? all.filter(it=>it.unit.toLowerCase().includes(q)) : all;
+  const top = filtered.slice(0,15);
   const area = document.getElementById('issuesFeed');
-  if(top.length===0){ area.innerHTML = '<div class="empty-state">Chưa có phản ánh nào.</div>'; return; }
+  if(all.length===0){ area.innerHTML = '<div class="empty-state">Chưa có phản ánh nào.</div>'; return; }
+  if(top.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
   area.innerHTML = top.map(it=>`
     <div class="issue-item">
       <div class="meta"><b>${escapeHTML(it.unit)}</b> · ${it.date}</div>
@@ -1199,9 +1370,13 @@ function renderCompletedOrgsTable(units){
   });
   all.sort((a,b)=> b.date.localeCompare(a.date));
   if(all.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị nào báo cáo tổ chức đảng đã số hóa hoàn thiện.</div>'; return; }
-  const shown = all.slice(0,200);
+  const searchEl = document.getElementById('orgsSearch');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const matched = q ? all.filter(o=>o.unit.toLowerCase().includes(q)) : all;
+  if(matched.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
+  const shown = matched.slice(0,200);
   area.innerHTML = `
-    <div class="hint" style="margin-bottom:10px;">Tổng cộng <b>${all.length}</b> tổ chức đảng đã được báo cáo số hóa hoàn thiện trên toàn Thành phố${all.length>200?' — hiển thị 200 bản ghi gần nhất':''}. Đơn vị báo nhầm tên tổ chức? Bấm "Xóa" ở dòng tương ứng để gỡ khỏi danh sách.</div>
+    <div class="hint" style="margin-bottom:10px;">${q ? `Tìm thấy <b>${matched.length}</b>` : `Tổng cộng <b>${all.length}</b>`} tổ chức đảng đã được báo cáo số hóa hoàn thiện${q?' khớp với từ khóa':' trên toàn Thành phố'}${matched.length>200?' — hiển thị 200 bản ghi gần nhất':''}. Đơn vị báo nhầm tên tổ chức? Bấm "Xóa" ở dòng tương ứng để gỡ khỏi danh sách.</div>
     <table><thead><tr><th>Đơn vị</th><th>Tổ chức đảng</th><th>Ngày xác nhận</th><th>Hành động</th></tr></thead><tbody>
     ${shown.map(o=>`<tr><td>${escapeHTML(o.unit)}</td><td>${escapeHTML(o.name)}</td><td>${o.date}</td><td><button class="btn btn-danger btn-sm" data-org-unit="${escapeHTML(o.unitId)}" data-org-name="${escapeHTML(o.name)}">Xóa</button></td></tr>`).join('')}
     </tbody></table>`;
@@ -1240,7 +1415,7 @@ function renderUnitTable(units){
   const area = document.getElementById('unitTableArea');
   if(units.length===0){ area.innerHTML = '<div class="empty-state"><b>Chưa có đơn vị</b>Thêm đơn vị ở mục "Quản lý đơn vị" bên dưới.</div>'; return; }
   area.innerHTML = `<table><thead><tr>
-    <th>Đơn vị</th><th class="num">Chỉ tiêu</th><th class="num">Lũy kế</th><th>Tiến độ</th><th class="num">Tổ chức đảng hoàn thành</th><th>Cập nhật gần nhất</th><th>Trạng thái</th>
+    <th>Đơn vị</th><th class="num">Chỉ tiêu</th><th class="num">Đã số hóa (lũy kế)</th><th>Tiến độ</th><th class="num">Tổ chức đảng hoàn thành</th><th>Cập nhật gần nhất</th><th>Trạng thái</th>
   </tr></thead><tbody>
     ${units.map(u=>{
       const s = statusLabel(u.status);
@@ -1272,6 +1447,31 @@ function renderUnitPhaseTable(units){
       return `<td class="num">${fmtNum(fill)} / ${fmtNum(t)}</td>`;
     }).join('');
     return `<tr><td>${escapeHTML(u.name)}</td>${cells}</tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+function renderChinhLyVsSoHoaTable(units){
+  const area = document.getElementById('chinhLySoHoaArea');
+  if(!area) return;
+  if(units.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị.</div>'; return; }
+  const filtered = filterUnitsBySearch(units, 'clshSearch');
+  if(filtered.length===0){ area.innerHTML = '<div class="empty-state">Không tìm thấy đơn vị nào khớp với từ khóa tìm kiếm.</div>'; return; }
+  const sorted = [...filtered].sort((a,b)=> (b.cumulativeChinhLy - b.cumulative) - (a.cumulativeChinhLy - a.cumulative));
+  area.innerHTML = `<table><thead><tr>
+    <th>Đơn vị</th><th class="num">Đã chỉnh lý (lũy kế)</th><th class="num">Đã số hóa / scan (lũy kế)</th><th class="num">Chênh lệch (chỉnh lý − số hóa)</th><th>Tỉ lệ đã số hóa / đã chỉnh lý</th>
+  </tr></thead><tbody>
+  ${sorted.map(u=>{
+    const gap = u.cumulativeChinhLy - u.cumulative;
+    const ratio = u.cumulativeChinhLy>0 ? Math.min(100,(u.cumulative/u.cumulativeChinhLy)*100) : (u.cumulative>0 ? 100 : 0);
+    const gapCls = gap < 0 ? 'badge-late' : (gap>0 ? 'badge-warn' : 'badge-ontime');
+    return `<tr>
+      <td>${escapeHTML(u.name)}</td>
+      <td class="num">${fmtNum(u.cumulativeChinhLy)}</td>
+      <td class="num">${fmtNum(u.cumulative)}</td>
+      <td class="num"><span class="status-pill ${gapCls}">${gap>0?'+':''}${fmtNum(gap)}</span></td>
+      <td><span class="progress-mini"><div style="width:${ratio}%"></div></span>${ratio.toFixed(0)}%</td>
+    </tr>`;
   }).join('')}
   </tbody></table>`;
 }
@@ -1363,15 +1563,16 @@ async function addUnit(){
 }
 
 function exportCSV(){
-  const rows = [['Đơn vị','Chỉ tiêu GĐ1','Chỉ tiêu GĐ2','Chỉ tiêu GĐ3','Tổng chỉ tiêu','Lũy kế','% hoàn thành','Tổ chức đảng hoàn thành','Cập nhật gần nhất','Trạng thái']];
+  const rows = [['Đơn vị','Chỉ tiêu GĐ1','Chỉ tiêu GĐ2','Chỉ tiêu GĐ3','Tổng chỉ tiêu','Đã số hóa (scan) lũy kế','% số hóa hoàn thành','Đã chỉnh lý lũy kế','Tổ chức đảng hoàn thành','Cập nhật gần nhất','Trạng thái']];
   unitsCache.forEach(u=>{
     const data = unitDataCache[u.id] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
     const latest = getLatestCumulative(data);
     const cumulative = latest? latest.cumulative : 0;
+    const cumulativeChinhLy = latest? latest.cumulativeChinhLy : 0;
     const lastDate = latest ? latest.date.replace(/-28$/,'') : '';
     const target = unitTotalTarget(u);
     const pct = target>0 ? ((cumulative/target)*100).toFixed(1) : '0';
-    rows.push([u.name, unitPhaseTarget(u,1), unitPhaseTarget(u,2), unitPhaseTarget(u,3), target, cumulative, pct+'%', (data.completedOrgs||[]).length, lastDate, '']);
+    rows.push([u.name, unitPhaseTarget(u,1), unitPhaseTarget(u,2), unitPhaseTarget(u,3), target, cumulative, pct+'%', cumulativeChinhLy, (data.completedOrgs||[]).length, lastDate, '']);
   });
   const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
