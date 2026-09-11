@@ -409,7 +409,7 @@ th.group-cl{background:var(--gold-soft);}
     <div class="card">
       <h2>Quản lý đơn vị</h2>
       <p class="sub">Thêm, sửa tên đơn vị và chỉ tiêu số hồ sơ được giao. Thay đổi áp dụng ngay cho toàn bộ dashboard.</p>
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="resetToOfficialList()">⟳ Nạp lại danh sách 99 phường/xã và đảng bộ trực thuộc chính thức</button>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="resetToOfficialList()">⟳ Bổ sung đơn vị / chỉ tiêu chính thức còn thiếu (không mất dữ liệu cũ)</button>
       <div id="unitManageArea"></div>
       <div style="margin-top:10px;">
         <label>Tên đơn vị mới</label>
@@ -469,7 +469,112 @@ const OFFICIAL_UNIT_NAMES = [
   "Xã Xuân Đường","Xã Xuân Hòa","Xã Xuân Phú","Xã Xuân Quế","Xã Xuân Thành",
   "Đảng bộ Cơ quan Đảng Thành phố","Đảng bộ UBND Thành phố","Đảng bộ Công an Thành phố","Đảng bộ Quân sự Thành phố"
 ];
-const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{1:0,2:0,3:0}}));
+/* Chỉ tiêu chính thức từng đơn vị theo Kế hoạch (Giai đoạn 1 = hồ sơ ưu tiên 1+2: cán bộ diện
+   cấp ủy quản lý, cán bộ lãnh đạo/quản lý chủ chốt; Giai đoạn 2 = hồ sơ ưu tiên 3: hồ sơ đang
+   sử dụng thường xuyên; Giai đoạn 3 = hồ sơ ưu tiên 4: còn lại — từ trần, xóa tên, khai trừ...).
+   Thứ tự khớp với OFFICIAL_UNIT_NAMES ở trên. */
+const OFFICIAL_UNIT_TARGETS = [
+  {1:52,2:876,3:11},
+  {1:46,2:715,3:77},
+  {1:86,2:1582,3:30},
+  {1:117,2:1193,3:150},
+  {1:123,2:1588,3:18},
+  {1:241,2:4180,3:880},
+  {1:64,2:971,3:35},
+  {1:180,2:1461,3:14},
+  {1:131,2:1145,3:171},
+  {1:120,2:973,3:8},
+  {1:64,2:641,3:0},
+  {1:141,2:918,3:8},
+  {1:191,2:2014,3:170},
+  {1:197,2:2937,3:24},
+  {1:176,2:2467,3:44},
+  {1:160,2:2593,3:1219},
+  {1:174,2:2822,3:1300},
+  {1:43,2:586,3:39},
+  {1:188,2:2281,3:856},
+  {1:111,2:831,3:926},
+  {1:112,2:1101,3:144},
+  {1:87,2:1053,3:67},
+  {1:237,2:5217,3:50},
+  {1:116,2:1662,3:3},
+  {1:111,2:789,3:164},
+  {1:165,2:1288,3:357},
+  {1:221,2:3243,3:28},
+  {1:256,2:8695,3:2274},
+  {1:141,2:2010,3:625},
+  {1:150,2:2610,3:400},
+  {1:79,2:1552,3:289},
+  {1:109,2:1323,3:59},
+  {1:168,2:2461,3:21},
+  {1:96,2:1401,3:183},
+  {1:35,2:596,3:58},
+  {1:102,2:562,3:6},
+  {1:92,2:798,3:250},
+  {1:73,2:837,3:89},
+  {1:99,2:707,3:55},
+  {1:51,2:420,3:71},
+  {1:130,2:1087,3:266},
+  {1:60,2:258,3:21},
+  {1:42,2:1276,3:15},
+  {1:95,2:559,3:73},
+  {1:106,2:930,3:19},
+  {1:44,2:315,3:48},
+  {1:80,2:433,3:85},
+  {1:83,2:282,3:47},
+  {1:219,2:1973,3:27},
+  {1:119,2:701,3:118},
+  {1:120,2:662,3:28},
+  {1:85,2:294,3:34},
+  {1:75,2:642,3:50},
+  {1:104,2:726,3:10},
+  {1:126,2:355,3:45},
+  {1:87,2:377,3:40},
+  {1:79,2:486,3:50},
+  {1:123,2:229,3:21},
+  {1:39,2:239,3:12},
+  {1:107,2:948,3:50},
+  {1:107,2:948,3:50},
+  {1:111,2:325,3:45},
+  {1:161,2:560,3:20},
+  {1:122,2:644,3:126},
+  {1:136,2:335,3:8},
+  {1:80,2:427,3:25},
+  {1:57,2:802,3:29},
+  {1:80,2:253,3:15},
+  {1:105,2:472,3:65},
+  {1:180,2:2024,3:20},
+  {1:66,2:292,3:7},
+  {1:76,2:342,3:3},
+  {1:74,2:429,3:525},
+  {1:69,2:702,3:31},
+  {1:110,2:960,3:45},
+  {1:77,2:925,3:178},
+  {1:84,2:681,3:136},
+  {1:101,2:563,3:15},
+  {1:75,2:559,3:85},
+  {1:95,2:354,3:50},
+  {1:96,2:633,3:7},
+  {1:100,2:614,3:107},
+  {1:76,2:385,3:15},
+  {1:171,2:969,3:6},
+  {1:76,2:530,3:5},
+  {1:63,2:769,3:17},
+  {1:120,2:898,3:106},
+  {1:43,2:664,3:8},
+  {1:81,2:688,3:28},
+  {1:112,2:1079,3:15},
+  {1:67,2:574,3:65},
+  {1:125,2:1025,3:21},
+  {1:86,2:570,3:100},
+  {1:65,2:428,3:4},
+  {1:65,2:535,3:104},
+  {1:135,2:1842,3:39},
+  {1:493,2:10677,3:278},
+  {1:209,2:3207,3:70},
+  {1:473,2:1014,3:30}
+];
+const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{...OFFICIAL_UNIT_TARGETS[i]}}));
 
 let unitsCache = [];
 let unitDataCache = {}; // unitId -> {dailyReports:[], monthlyNotes:[], completedOrgs:[]}
@@ -1539,14 +1644,29 @@ async function deleteUnit(uid){
 }
 
 async function resetToOfficialList(){
-  if(!confirm('Thao tác này sẽ THAY THẾ TOÀN BỘ danh sách đơn vị hiện tại bằng danh sách 99 phường/xã và đảng bộ trực thuộc chính thức (chỉ tiêu để 0, có thể sửa lại sau). Dữ liệu báo cáo đã nộp theo tên đơn vị cũ sẽ không còn gắn với đơn vị nào. Tiếp tục?')) return;
-  const fresh = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{1:0,2:0,3:0}}));
-  const ok = await setJSON('config:units', true, fresh);
+  // KHÔNG còn xóa/ghi đè dữ liệu hiện có: chỉ bổ sung những đơn vị trong danh sách 99
+  // chính thức mà bảng "Quản lý đơn vị" đang thiếu (kèm chỉ tiêu chính thức theo Kế hoạch),
+  // và điền chỉ tiêu chính thức cho đơn vị đã có tên nhưng đang để trống (0/0/0).
+  // Đơn vị đã được sửa chỉ tiêu thủ công, hoặc đơn vị tự thêm ngoài danh sách 99, được giữ nguyên.
+  if(!confirm('Bổ sung các đơn vị còn thiếu trong danh sách 99 phường/xã, đảng bộ trực thuộc chính thức, và điền chỉ tiêu chính thức theo Kế hoạch cho đơn vị đang để trống. Các đơn vị đã có chỉ tiêu sẽ được giữ nguyên, không bị mất dữ liệu. Tiếp tục?')) return;
+  const byName = new Map(unitsCache.map(u=>[u.name, u]));
+  let added = 0, filled = 0;
+  OFFICIAL_UNIT_NAMES.forEach((name, i) => {
+    const official = OFFICIAL_UNIT_TARGETS[i];
+    const existing = byName.get(name);
+    if(!existing){
+      unitsCache.push({id:'u'+String(i+1).padStart(2,'0'), name, targets:{...official}});
+      added++;
+    } else {
+      const t = existing.targets || {1:0,2:0,3:0};
+      const isEmpty = !(t[1]||t[2]||t[3]);
+      if(isEmpty){ existing.targets = {...official}; filled++; }
+    }
+  });
+  const ok = await setJSON('config:units', true, unitsCache);
   if(ok){
-    unitsCache = fresh;
-    unitDataCache = {};
-    for(const u of unitsCache){ unitDataCache[u.id] = await loadUnitData(u.id); }
-    showToast('Đã nạp danh sách 99 đơn vị chính thức');
+    for(const u of unitsCache){ if(!unitDataCache[u.id]) unitDataCache[u.id] = await loadUnitData(u.id); }
+    showToast(`Đã cập nhật: thêm ${added} đơn vị, điền chỉ tiêu cho ${filled} đơn vị — không mất dữ liệu cũ`);
     populateUnitSelect();
     renderUnitForms();
     renderUnitHistory();
