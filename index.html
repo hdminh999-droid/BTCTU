@@ -182,6 +182,9 @@ textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
 .seal .pct{font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--red);}
 .seal .cap{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--red);text-transform:uppercase;text-align:center;}
 
+.roadmap-summary{font-family:var(--font-mono);font-size:15px;color:var(--ink);margin:0 140px 18px 0;padding-bottom:14px;border-bottom:1px dashed var(--line);}
+.roadmap-summary b{color:var(--red);}
+
 /* Table */
 table{width:100%;border-collapse:collapse;font-size:15.5px;line-height:1.5;}
 th{
@@ -202,8 +205,10 @@ th.group-sh{background:var(--danger-soft);}
 th.group-cl{background:var(--gold-soft);}
 .table-scroll-x td + td.num, .table-scroll-x th + th.num{border-left:1px dashed var(--line-soft);}
 
-.progress-mini{width:100px;height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;border:1px solid var(--line);display:inline-block;vertical-align:middle;margin-right:8px;}
+.progress-mini{width:100px;height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;border:1px solid var(--line);display:inline-block;vertical-align:middle;margin-right:8px;flex-shrink:0;}
 .progress-mini > div{height:100%;background:var(--red);}
+.cell-progress{display:inline-flex;align-items:center;white-space:nowrap;}
+.table-scroll-x td, .table-scroll-x th{white-space:nowrap;}
 
 .empty-state{
   text-align:center;padding:34px 20px;color:var(--ink-soft);font-size:15.5px;
@@ -374,8 +379,13 @@ th.group-cl{background:var(--gold-soft);}
     </div>
 
     <div class="card">
-      <h2>Chỉ tiêu &amp; tiến độ theo giai đoạn của từng đơn vị</h2>
-      <p class="sub">Lũy kế từng giai đoạn được cộng trực tiếp từ số hồ sơ đơn vị nhập theo từng giai đoạn trong báo cáo ngày (không còn suy đoán theo thứ tự tuần tự 1 → 2 → 3). Báo cáo cũ trước khi tách giai đoạn chỉ được tính vào tổng lũy kế chung ở các bảng khác, chưa phân theo giai đoạn ở đây. Chỉnh chỉ tiêu từng giai đoạn cho từng đơn vị ở mục "Quản lý đơn vị" bên dưới.</p>
+      <div class="toolbar toolbar-top">
+        <div>
+          <h2 style="margin:0;">Tiến độ chỉnh lý theo giai đoạn của từng đơn vị</h2>
+          <p class="sub" style="margin:4px 0 0;">Lũy kế <b>chỉnh lý</b> từng giai đoạn được cộng trực tiếp từ số hồ sơ đơn vị nhập theo từng giai đoạn trong báo cáo ngày. Chỉ tiêu đối chiếu dùng chung với chỉ tiêu số hóa từng giai đoạn. Chỉnh chỉ tiêu từng giai đoạn cho từng đơn vị ở mục "Quản lý đơn vị" bên dưới.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportUnitPhaseCSV()">⬇ Xuất CSV</button>
+      </div>
       <div id="unitPhaseArea"></div>
     </div>
 
@@ -1247,6 +1257,9 @@ function renderAdmin(){
     const cumulativePhase2 = latest ? latest.cumulativePhase2 : 0;
     const cumulativePhase3 = latest ? latest.cumulativePhase3 : 0;
     const cumulativeChinhLy = latest ? latest.cumulativeChinhLy : 0;
+    const cumulativeChinhLyPhase1 = latest ? latest.cumulativeChinhLyPhase1 : 0;
+    const cumulativeChinhLyPhase2 = latest ? latest.cumulativeChinhLyPhase2 : 0;
+    const cumulativeChinhLyPhase3 = latest ? latest.cumulativeChinhLyPhase3 : 0;
     const lastDate = latest ? latest.date : null;
     const gapDays = lastDate ? daysBetween(lastDate, todayISO()) : null;
     let status = 'never';
@@ -1257,7 +1270,7 @@ function renderAdmin(){
     }
     const target = unitTotalTarget(u);
     const pct = target>0 ? Math.min(100, (cumulative/target)*100) : 0;
-    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, cumulativeChinhLy, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
+    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, cumulativeChinhLy, cumulativeChinhLyPhase1, cumulativeChinhLyPhase2, cumulativeChinhLyPhase3, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
   });
   unitsWithStatusCache = unitsWithStatus; // để các ô tìm kiếm tự render lại khi gõ, không cần tính lại từ đầu
 
@@ -1346,6 +1359,7 @@ function renderRoadmap(totalCumulative, units){
 
   document.getElementById('roadmapArea').innerHTML = `
     <div class="seal"><div class="pct">${overallPct.toFixed(0)}%</div><div class="cap">Tiến độ chung</div></div>
+    <div class="roadmap-summary">Tổng hợp báo cáo — đã <b>số hóa (scan)</b> toàn Thành phố: <b>${fmtNum(totalCumulative)}</b> / ${fmtNum(totalTargetAssigned)} hồ sơ (chỉ tiêu đã giao)</div>
     <div class="stages">${stagesHTML}</div>
   `;
 }
@@ -1530,22 +1544,37 @@ function statusLabel(status){
 function renderUnitTable(units){
   const area = document.getElementById('unitTableArea');
   if(units.length===0){ area.innerHTML = '<div class="empty-state"><b>Chưa có đơn vị</b>Thêm đơn vị ở mục "Quản lý đơn vị" bên dưới.</div>'; return; }
-  area.innerHTML = `<table><thead><tr>
-    <th>Đơn vị</th><th class="num">Chỉ tiêu</th><th class="num">Đã số hóa (lũy kế)</th><th>Tiến độ</th><th class="num">Tổ chức đảng hoàn thành</th><th>Cập nhật gần nhất</th><th>Trạng thái</th>
-  </tr></thead><tbody>
+  area.innerHTML = `<div class="table-scroll-x"><table style="min-width:1080px;"><thead>
+    <tr>
+      <th rowspan="2">Đơn vị</th>
+      <th rowspan="2" class="num">Chỉ tiêu</th>
+      <th colspan="${PHASES.length}" class="group-head group-sh">Đã scan (lũy kế) — theo giai đoạn</th>
+      <th rowspan="2" class="num">Tổ chức đảng<br>hoàn thành</th>
+      <th rowspan="2">Cập nhật gần nhất</th>
+      <th rowspan="2">Trạng thái</th>
+    </tr>
+    <tr>
+      ${PHASES.map(p=>`<th class="num sub-head group-sh">${p.label}</th>`).join('')}
+    </tr>
+  </thead><tbody>
     ${units.map(u=>{
       const s = statusLabel(u.status);
+      const phaseCells = PHASES.map(p=>{
+        const t = unitPhaseTarget(u,p.id);
+        const fill = u['cumulativePhase'+p.id] || 0;
+        const pct = t>0 ? Math.min(100,(fill/t)*100) : 0;
+        return `<td class="num"><div class="cell-progress"><span class="progress-mini"><div style="width:${pct}%"></div></span>${fmtNum(fill)} / ${fmtNum(t)}</div></td>`;
+      }).join('');
       return `<tr>
         <td>${escapeHTML(u.name)}</td>
         <td class="num">${fmtNum(u.target)}</td>
-        <td class="num">${fmtNum(u.cumulative)}</td>
-        <td><span class="progress-mini"><div style="width:${u.pct}%"></div></span>${u.pct.toFixed(0)}%</td>
+        ${phaseCells}
         <td class="num">${fmtNum(u.orgsCount)}</td>
         <td>${u.lastDate ? fmtDate(u.lastDate.replace(/-28$/,'') ) : '—'}</td>
         <td><span class="status-pill ${s.cls}">${s.text}</span></td>
       </tr>`;
     }).join('')}
-  </tbody></table>`;
+  </tbody></table></div>`;
 }
 
 function renderUnitPhaseTable(units){
@@ -1554,13 +1583,14 @@ function renderUnitPhaseTable(units){
   if(units.length===0){ area.innerHTML = '<div class="empty-state">Chưa có đơn vị.</div>'; return; }
   area.innerHTML = `<table><thead><tr>
     <th>Đơn vị</th>
-    ${PHASES.map(p=>`<th class="num">${p.label} (lũy kế / chỉ tiêu)</th>`).join('')}
+    ${PHASES.map(p=>`<th>${p.label} — đã chỉnh lý</th>`).join('')}
   </tr></thead><tbody>
   ${units.map(u=>{
     const cells = PHASES.map(p=>{
       const t = unitPhaseTarget(u,p.id);
-      const fill = u['cumulativePhase'+p.id] || 0;
-      return `<td class="num">${fmtNum(fill)} / ${fmtNum(t)}</td>`;
+      const fill = u['cumulativeChinhLyPhase'+p.id] || 0;
+      const pct = t>0 ? Math.min(100,(fill/t)*100) : 0;
+      return `<td><span class="progress-mini"><div style="width:${pct}%"></div></span>${fmtNum(fill)} / ${fmtNum(t)}</td>`;
     }).join('');
     return `<tr><td>${escapeHTML(u.name)}</td>${cells}</tr>`;
   }).join('')}
@@ -1714,6 +1744,31 @@ function exportCSV(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'tong-hop-tien-do-so-hoa-ho-so-dang-vien.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportUnitPhaseCSV(){
+  const header = ['Đơn vị'];
+  PHASES.forEach(p=>{ header.push('Chỉ tiêu '+p.label, 'Đã chỉnh lý '+p.label, '% hoàn thành '+p.label); });
+  const rows = [header];
+  unitsCache.forEach(u=>{
+    const data = unitDataCache[u.id] || {dailyReports:[],monthlyNotes:[],completedOrgs:[]};
+    const latest = getLatestCumulative(data);
+    const row = [u.name];
+    PHASES.forEach(p=>{
+      const t = unitPhaseTarget(u,p.id);
+      const fill = latest ? (latest['cumulativeChinhLyPhase'+p.id] || 0) : 0;
+      const pct = t>0 ? ((fill/t)*100).toFixed(1) : '0';
+      row.push(t, fill, pct+'%');
+    });
+    rows.push(row);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tien-do-chinh-ly-theo-giai-doan.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
