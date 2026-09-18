@@ -271,6 +271,43 @@ th.group-cl{background:var(--gold-soft);}
 .gs-status.checking .dot{background:var(--amber);}
 .setup-steps{font-size:14.5px;color:var(--ink-soft);line-height:1.7;margin:0 0 14px;padding-left:18px;}
 .setup-steps b{color:var(--ink);}
+
+/* KPI có thể bấm để xem chi tiết (VD: danh sách đơn vị chưa báo cáo) */
+.kpi-clickable{cursor:pointer;transition:box-shadow .15s ease, transform .15s ease;}
+.kpi-clickable:hover{box-shadow:0 0 0 2px var(--red) inset;transform:translateY(-1px);}
+.kpi-clickable .label::after{content:' →';color:var(--red-deep);opacity:.6;}
+
+/* Modal danh sách đơn vị */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(31,41,51,.55);z-index:100;
+  align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{
+  background:var(--paper);border-radius:14px;max-width:540px;width:100%;max-height:80vh;
+  display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);
+  box-shadow:0 18px 40px rgba(31,41,51,.28);
+}
+.modal-head{
+  padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  background:linear-gradient(135deg,var(--red-deep),var(--red) 70%);color:#F6EFE3;flex-shrink:0;
+}
+.modal-head h3{margin:0;font-family:var(--font-display);font-size:16.5px;font-weight:600;line-height:1.4;}
+.modal-close{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#F6EFE3;border-radius:7px;
+  width:28px;height:28px;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;}
+.modal-close:hover{background:rgba(255,255,255,.24);}
+.modal-body{padding:6px 20px 18px;overflow-y:auto;}
+.modal-body .search-box{margin-top:12px;}
+.not-reported-list, .modal-list{list-style:none;margin:0;padding:0;counter-reset:nr;}
+.not-reported-list li, .modal-list li{
+  counter-increment:nr;padding:9px 4px 9px 32px;border-bottom:1px solid var(--line-soft);font-size:15.5px;position:relative;
+}
+.not-reported-list li:last-child, .modal-list li:last-child{border-bottom:none;}
+.not-reported-list li::before, .modal-list li::before{
+  content:counter(nr);position:absolute;left:0;top:9px;width:21px;height:21px;border-radius:50%;
+  background:var(--danger-soft);color:var(--danger);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;
+}
+.not-reported-list li .gap-note, .modal-list li .modal-list-note{display:block;font-size:13px;color:var(--ink-soft);margin-top:1px;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -456,6 +493,21 @@ th.group-cl{background:var(--gold-soft);}
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="infoModal" onclick="if(event.target===this) closeInfoModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="infoModalTitle">—</h3>
+      <button class="modal-close" onclick="closeInfoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="search-box" id="infoModalSearchWrap" style="margin-bottom:10px;display:none;">
+        <input type="text" id="infoModalSearch" placeholder="🔎 Tìm…" oninput="renderInfoModalBody()">
+      </div>
+      <div id="infoModalBody"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ---------- Constants from Kế hoạch số hóa hồ sơ đảng viên ---------- */
 const PHASES = [
@@ -596,6 +648,9 @@ const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padS
 
 let unitsCache = [];
 let unitDataCache = {}; // unitId -> {dailyReports:[], monthlyNotes:[], completedOrgs:[]}
+let notReportedTodayUnitsCache = []; // đơn vị chưa nộp báo cáo ngày hôm nay — dùng cho popup "Đơn vị chưa báo cáo"
+let overTargetUnitsCache = []; // đơn vị có số liệu vượt chỉ tiêu, kèm chi tiết chỗ vượt — dùng cho popup tương ứng
+let completedOrgsAllCache = []; // toàn bộ tổ chức đảng đã số hóa hoàn thiện kèm tên đơn vị — dùng cho popup tương ứng
 let unitsWithStatusCache = []; // bản đã tính cumulative/status — dùng để ô tìm kiếm tự render lại
 let unitChartInstance = null;
 let currentHistoryView = 'daily';
@@ -762,7 +817,104 @@ function showToast(msg){
   t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+/* ---------- Modal danh sách dùng chung cho các ô KPI có thể bấm ---------- */
+let infoModalRenderFn = null; // (query) => htmlString — hàm dựng nội dung theo từ khóa tìm kiếm hiện tại
+
+function openInfoModal(title, opts){
+  opts = opts || {};
+  document.getElementById('infoModalTitle').textContent = title;
+  const searchWrap = document.getElementById('infoModalSearchWrap');
+  const searchInput = document.getElementById('infoModalSearch');
+  if(opts.searchable){
+    searchWrap.style.display = '';
+    searchInput.placeholder = opts.placeholder || '🔎 Tìm…';
+    searchInput.value = '';
+  } else {
+    searchWrap.style.display = 'none';
+  }
+  infoModalRenderFn = opts.renderFn || (()=>'');
+  renderInfoModalBody();
+  document.getElementById('infoModal').classList.add('show');
+}
+function closeInfoModal(){
+  document.getElementById('infoModal').classList.remove('show');
+}
+function renderInfoModalBody(){
+  const q = (document.getElementById('infoModalSearch').value || '').trim().toLowerCase();
+  document.getElementById('infoModalBody').innerHTML = infoModalRenderFn ? infoModalRenderFn(q) : '';
+}
+
+function showNotReportedModal(){
+  const info = getReportingDayInfo();
+  const count = notReportedTodayUnitsCache.length;
+  openInfoModal(
+    (info.isReportingDay ? `Chưa báo cáo hôm nay (${info.label} — ngày định kỳ)` : 'Đơn vị chưa báo cáo hôm nay') + ` — ${count} đơn vị`,
+    {
+      searchable: true,
+      placeholder: '🔎 Tìm theo tên đơn vị…',
+      renderFn: (q)=>{
+        if(notReportedTodayUnitsCache.length===0) return '<div class="empty-state">🎉 Tất cả đơn vị đã báo cáo hôm nay.</div>';
+        const list = notReportedTodayUnitsCache.filter(u => !q || u.name.toLowerCase().includes(q));
+        if(list.length===0) return '<div class="empty-state">Không tìm thấy đơn vị phù hợp.</div>';
+        return '<ul class="modal-list">' + list.map(u=>{
+          const gapNote = u.lastDate
+            ? `Báo cáo gần nhất: ${fmtDate(u.lastDate)}${u.gapDays!==null ? ` (${u.gapDays} ngày trước)` : ''}`
+            : 'Chưa từng báo cáo';
+          return `<li>${escapeHTML(u.name)}<span class="modal-list-note">${gapNote}</span></li>`;
+        }).join('') + '</ul>';
+      }
+    }
+  );
+}
+
+function showOverTargetModal(){
+  openInfoModal(
+    `Đơn vị báo cáo số liệu lỗi so với chỉ tiêu — ${overTargetUnitsCache.length} đơn vị`,
+    {
+      searchable: true,
+      placeholder: '🔎 Tìm theo tên đơn vị…',
+      renderFn: (q)=>{
+        if(overTargetUnitsCache.length===0) return '<div class="empty-state">✅ Không phát hiện đơn vị nào báo cáo số liệu lỗi so với chỉ tiêu.</div>';
+        const list = overTargetUnitsCache.filter(x => !q || x.unit.name.toLowerCase().includes(q));
+        if(list.length===0) return '<div class="empty-state">Không tìm thấy đơn vị phù hợp.</div>';
+        return '<ul class="modal-list">' + list.map(x=>{
+          const detail = x.issues.map(iss=>{
+            const label = iss.type==='scan' ? 'Số hóa (scan)' : 'Chỉnh lý';
+            const phase = PHASES.find(p=>p.id===iss.phase);
+            return `${label} ${phase ? phase.label : 'GĐ'+iss.phase}: ${fmtNum(iss.value)} / ${fmtNum(iss.target)} (vượt ${fmtNum(iss.value-iss.target)})`;
+          }).join('<br>');
+          return `<li>${escapeHTML(x.unit.name)}<span class="modal-list-note" style="color:var(--danger);">${detail}</span></li>`;
+        }).join('') + '</ul>';
+      }
+    }
+  );
+}
+
+function showCompletedOrgsModal(){
+  openInfoModal(
+    `Tổ chức đảng đã số hóa hoàn thiện — ${completedOrgsAllCache.length} tổ chức`,
+    {
+      searchable: true,
+      placeholder: '🔎 Tìm theo tên đơn vị hoặc tổ chức đảng…',
+      renderFn: (q)=>{
+        if(completedOrgsAllCache.length===0) return '<div class="empty-state">Chưa có tổ chức đảng nào được báo cáo số hóa hoàn thiện.</div>';
+        const list = completedOrgsAllCache.filter(o => !q || o.unit.toLowerCase().includes(q) || o.name.toLowerCase().includes(q));
+        if(list.length===0) return '<div class="empty-state">Không tìm thấy kết quả phù hợp.</div>';
+        return '<ul class="modal-list">' + list.map(o=>
+          `<li>${escapeHTML(o.name)}<span class="modal-list-note">Đơn vị: ${escapeHTML(o.unit)} — xác nhận ngày ${o.date}</span></li>`
+        ).join('') + '</ul>';
+      }
+    }
+  );
+}
+
 function todayISO(){ return new Date().toISOString().slice(0,10); }
+// Lịch báo cáo định kỳ: Thứ 4 và Thứ 6 hằng tuần. getDay(): 0=CN,1=T2,2=T3,3=T4,4=T5,5=T6,6=T7
+function getReportingDayInfo(){
+  const day = new Date().getDay();
+  const map = {3:'Thứ 4', 5:'Thứ 6'};
+  return {isReportingDay: (day===3 || day===5), label: map[day] || null};
+}
 function thisMonthStr(){ return new Date().toISOString().slice(0,7); }
 function fmtNum(n){ return (n||0).toLocaleString('vi-VN'); }
 function daysBetween(a,b){ return Math.round((new Date(b) - new Date(a)) / 86400000); }
@@ -1308,15 +1460,29 @@ function renderAdmin(){
   const totalChinhLy = unitsWithStatus.reduce((s,u)=>s+u.cumulativeChinhLy,0);
   const totalTargetAssigned = unitsWithStatus.reduce((s,u)=>s+ (u.target||0), 0);
   const totalOrgsCompleted = unitsWithStatus.reduce((s,u)=>s+u.orgsCount,0);
-  const reportedToday = unitsWithStatus.filter(u=>{
+  const completedOrgsAll = [];
+  unitsWithStatus.forEach(u=>{
+    const data = unitDataCache[u.id] || {completedOrgs:[]};
+    (data.completedOrgs||[]).forEach(o=> completedOrgsAll.push({unit:u.name, unitId:u.id, name:o.name, date:o.date, source:o.source}));
+  });
+  completedOrgsAll.sort((a,b)=> b.date.localeCompare(a.date));
+  completedOrgsAllCache = completedOrgsAll; // để popup "Tổ chức đảng đã số hóa hoàn thiện" đọc lại khi bấm
+  const reportedTodayUnitIds = new Set(unitsWithStatus.filter(u=>{
     const data = unitDataCache[u.id];
     return data && data.dailyReports.some(r=>r.date===todayISO());
-  }).length;
+  }).map(u=>u.id));
+  const reportedToday = reportedTodayUnitIds.size;
+  const notReportedTodayUnits = unitsWithStatus.filter(u=>!reportedTodayUnitIds.has(u.id));
+  notReportedTodayUnitsCache = notReportedTodayUnits; // để popup "Đơn vị chưa báo cáo" đọc lại khi bấm
   const staleUnits = unitsWithStatus.filter(u=>u.status==='late' || u.status==='never').length;
-  const overTargetUnitsCount = unitsWithStatus.filter(u=>overTargetIssues(u).length>0).length;
+  const overTargetUnitsList = unitsWithStatus
+    .map(u=>({unit:u, issues:overTargetIssues(u)}))
+    .filter(x=>x.issues.length>0);
+  overTargetUnitsCache = overTargetUnitsList; // để popup "Đơn vị có số liệu vượt chỉ tiêu" đọc lại khi bấm
+  const overTargetUnitsCount = overTargetUnitsList.length;
 
   const safeRender = (fn, label) => { try{ fn(); }catch(e){ console.error('Lỗi khi vẽ ' + label, e); } };
-  safeRender(()=>renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted, overTargetUnitsCount), 'KPI');
+  safeRender(()=>renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted, overTargetUnitsCount, notReportedTodayUnits), 'KPI');
   safeRender(()=>renderRoadmap(totalCumulative, unitsWithStatus), 'lộ trình');
   safeRender(()=>renderIssuesFeed(), 'danh sách vướng mắc');
   safeRender(()=>renderUnitTable(unitsWithStatus), 'bảng đơn vị');
@@ -1328,23 +1494,40 @@ function renderAdmin(){
   safeRender(()=>renderAllUnitsChart(unitsWithStatus), 'biểu đồ so sánh tất cả đơn vị');
 }
 
-function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted, overTargetUnitsCount){
+function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted, overTargetUnitsCount, notReportedTodayUnits){
   const phaseIdx = currentPhaseIndex();
   const phase = PHASES[phaseIdx];
   const cumulativeTargetToPhase = PHASES.slice(0,phaseIdx+1).reduce((s,p)=>s+p.target,0);
   const daysLeft = daysBetween(todayISO(), phase.deadline);
 
+  const notReportedCount = notReportedTodayUnits ? notReportedTodayUnits.length : (unitCount - reportedToday);
+  const reportInfo = getReportingDayInfo();
+  const notReportedKpi = reportInfo.isReportingDay
+    ? {
+        label: `Đơn vị CHƯA báo cáo hôm nay (${reportInfo.label} — ngày định kỳ)`,
+        value: `${notReportedCount}`,
+        extra: `/ ${unitCount} đơn vị — bấm để xem danh sách`,
+        danger: notReportedCount>0,
+        clickable: true, onclick: 'showNotReportedModal()'
+      }
+    : {
+        label: 'Đơn vị chưa báo cáo hôm nay',
+        value: `${notReportedCount}`,
+        extra: `/ ${unitCount} đơn vị — ngày báo cáo định kỳ: Thứ 4, Thứ 6 (bấm để xem danh sách)`,
+        clickable: true, onclick: 'showNotReportedModal()'
+      };
+
   const kpis = [
     {label:'Tổng lũy kế đã SỐ HÓA (SCAN) toàn Thành phố', value: fmtNum(totalCumulative), extra: `/ ${fmtNum(TOTAL_TARGET)} hồ sơ (mục tiêu chung)`},
     {label:'Tổng lũy kế đã CHỈNH LÝ toàn Thành phố', value: fmtNum(totalChinhLy), extra: totalChinhLy>0 ? `${((totalCumulative/totalChinhLy)*100).toFixed(0)}% số đã chỉnh lý đã được số hóa` : 'Chưa có số liệu chỉnh lý'},
-    {label:'Tổ chức đảng đã số hóa hoàn thiện', value: fmtNum(totalOrgsCompleted), extra: 'chi bộ / đảng bộ bộ phận đã báo cáo xong'},
-    {label:'Đơn vị đã báo cáo hôm nay', value: `${reportedToday}`, extra: `/ ${unitCount} đơn vị`},
+    {label:'Tổ chức đảng đã số hóa hoàn thiện', value: fmtNum(totalOrgsCompleted), extra: 'chi bộ / đảng bộ bộ phận đã báo cáo xong — bấm để xem danh sách', clickable: true, onclick: 'showCompletedOrgsModal()'},
+    notReportedKpi,
     {label:phase.label + ' — còn lại', value: daysLeft>=0? daysLeft+' ngày' : 'Quá hạn', extra: 'đến hạn ' + fmtDate(phase.deadline)},
     {label:'Đơn vị cần đôn đốc', value: `${staleUnits}`, extra:'chưa cập nhật > 14 ngày hoặc chưa báo cáo'},
-    {label:'Đơn vị có số liệu vượt chỉ tiêu', value: `${overTargetUnitsCount}`, extra: overTargetUnitsCount>0 ? '⚠ số đã scan/chỉnh lý vượt chỉ tiêu giai đoạn — cần kiểm tra lại' : 'Không phát hiện bất thường', danger: overTargetUnitsCount>0},
+    {label:'Đơn vị báo cáo số liệu lỗi so với chỉ tiêu', value: `${overTargetUnitsCount}`, extra: (overTargetUnitsCount>0 ? '⚠ số đã scan/chỉnh lý vượt chỉ tiêu giai đoạn — cần kiểm tra lại' : 'Không phát hiện bất thường') + ' — bấm để xem danh sách', danger: overTargetUnitsCount>0, clickable: true, onclick: 'showOverTargetModal()'},
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
-    <div class="kpi${k.danger?' kpi-danger':''}">
+    <div class="kpi${k.danger?' kpi-danger':''}${k.clickable?' kpi-clickable':''}" ${k.clickable?`onclick="${k.onclick}" role="button" tabindex="0"`:''}>
       <div class="label">${k.label}</div>
       <div class="value">${k.value}</div>
       <div class="delta">${k.extra}</div>
