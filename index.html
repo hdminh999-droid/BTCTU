@@ -1622,13 +1622,23 @@ function renderRoadmap(totalCumulative, units){
   // không dùng số cố định trong Kế hoạch, để lộ trình luôn khớp với chỉ tiêu thực tế đưa ra.
   const phaseTargets = PHASES.map(p => (units||[]).reduce((s,u)=> s + unitPhaseTarget(u, p.id), 0));
   const totalTargetAssigned = phaseTargets.reduce((s,t)=>s+t,0);
+  // Lũy kế đã số hóa (scan) của TỪNG giai đoạn = tổng cumulativePhase1/2/3 thực tế của các
+  // đơn vị, để mỗi giai đoạn hiện đúng tổng số đã số hóa riêng (không chờ giai đoạn trước đầy).
+  const phaseCumulative = PHASES.map(p => (units||[]).reduce((s,u)=> s + (u['cumulativePhase'+p.id] || 0), 0));
+  // Báo cáo cũ (trước khi tách giai đoạn) chỉ có trong tổng chung (cumulative), không nằm
+  // trong cumulativePhase1/2/3 — cộng phần "cũ" này vào Giai đoạn 1 để không bị mất lũy kế
+  // và để tổng 3 giai đoạn luôn khớp với tổng chung hiển thị phía trên.
+  const legacyCumulative = (units||[]).reduce((s,u)=>{
+    const attributed = (u.cumulativePhase1||0) + (u.cumulativePhase2||0) + (u.cumulativePhase3||0);
+    return s + Math.max(0, (u.cumulative||0) - attributed);
+  }, 0);
+  phaseCumulative[0] += legacyCumulative;
   const overallPct = totalTargetAssigned>0 ? Math.min(100, (totalCumulative/totalTargetAssigned)*100) : 0;
 
   const stagesHTML = PHASES.map((p,i)=>{
     const target = phaseTargets[i];
-    const before = phaseTargets.slice(0,i).reduce((s,t)=>s+t,0);
-    const fillInThisStage = Math.max(0, Math.min(target, totalCumulative - before));
-    const pct = target>0 ? (fillInThisStage/target)*100 : 0;
+    const fillInThisStage = phaseCumulative[i];
+    const pct = target>0 ? Math.min(100, (fillInThisStage/target)*100) : 0;
     const daysLeft = daysBetween(today, p.deadline);
     let badgeClass = 'badge-ontime', badgeText = 'Còn ' + daysLeft + ' ngày';
     if(daysLeft < 0){ badgeClass='badge-late'; badgeText='Đã quá hạn ' + Math.abs(daysLeft) + ' ngày'; }
