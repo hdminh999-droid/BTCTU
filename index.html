@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" defer></script>
 <style>
 
 :root{
@@ -153,6 +154,8 @@ textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
 /* KPI cards */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
 .kpi{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+.kpi.kpi-danger{border-color:var(--danger);background:var(--danger-soft);}
+.kpi.kpi-danger .value{color:var(--danger);}
 .kpi .label{font-size:14px;color:#414A54;text-transform:uppercase;letter-spacing:.03em;font-weight:700;margin-bottom:8px;}
 .kpi .value{font-family:var(--font-mono);font-size:27px;font-weight:700;color:var(--ink);}
 .kpi .value small{font-size:15px;font-weight:600;color:var(--ink-soft);}
@@ -207,6 +210,8 @@ th.group-cl{background:var(--gold-soft);}
 
 .progress-mini{width:100px;height:8px;background:var(--line-soft);border-radius:4px;overflow:hidden;border:1px solid var(--line);display:inline-block;vertical-align:middle;margin-right:8px;flex-shrink:0;}
 .progress-mini > div{height:100%;background:var(--red);}
+.over-target{color:var(--danger);font-weight:700;}
+.warn-icon{cursor:help;color:var(--danger);}
 .cell-progress{display:inline-flex;align-items:center;white-space:nowrap;}
 .table-scroll-x td, .table-scroll-x th{white-space:nowrap;}
 
@@ -373,7 +378,10 @@ th.group-cl{background:var(--gold-soft);}
     <div class="card">
       <div class="toolbar">
         <h2 style="margin:0;">Bảng tổng hợp theo đơn vị</h2>
-        <div class="right"><button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Xuất CSV</button></div>
+        <div class="right">
+          <button class="btn btn-ghost btn-sm" onclick="exportThongKeExcel()">⬇ Xuất báo cáo Excel (mẫu thống kê)</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Xuất CSV</button>
+        </div>
       </div>
       <div id="unitTableArea"></div>
     </div>
@@ -624,6 +632,27 @@ function unitTotalTarget(u){
   return PHASES.reduce((s,p)=> s + unitPhaseTarget(u, p.id), 0);
 }
 
+/* ---------- Cảnh báo số liệu vượt chỉ tiêu (dấu hiệu nhập sai) ----------
+   Số hồ sơ đã số hóa (scan) hoặc đã chỉnh lý lũy kế của MỘT giai đoạn không nên
+   vượt quá chỉ tiêu đã giao cho giai đoạn đó — nếu vượt, nhiều khả năng là gõ nhầm
+   số khi nhập báo cáo ngày, cần kiểm tra lại. Trả về danh sách các chỗ vượt của 1 đơn vị. */
+function overTargetIssues(u){
+  const issues = [];
+  PHASES.forEach(p=>{
+    const t = unitPhaseTarget(u,p.id);
+    if(t<=0) return;
+    const scanned = u['cumulativePhase'+p.id] || 0;
+    const cl = u['cumulativeChinhLyPhase'+p.id] || 0;
+    if(scanned>t) issues.push({phase:p.id, type:'scan', value:scanned, target:t});
+    if(cl>t) issues.push({phase:p.id, type:'chinhLy', value:cl, target:t});
+  });
+  return issues;
+}
+function overTargetCell(fill, target, tooltip){
+  const over = target>0 && fill>target;
+  return `<span class="${over?'over-target':''}">${fmtNum(fill)} / ${fmtNum(target)}</span>${over?` <span class="warn-icon" title="${escapeHTML(tooltip)}">⚠</span>`:''}`;
+}
+
 /* ---------- Kết nối Google Apps Script (backend lưu trên Google Sheet) ---------- */
 /* Dán URL Web App (.../exec) vào đây TRƯỚC KHI đẩy lên Netlify, để mọi người dùng chung
    một Google Sheet mà không cần tự dán URL vào ô cấu hình. */
@@ -832,7 +861,7 @@ function getLatestCumulative(unitData){
   return {
     cumulative:last.cumulative, cumulativePhase1:last.cumulativePhase1, cumulativePhase2:last.cumulativePhase2, cumulativePhase3:last.cumulativePhase3,
     cumulativeChinhLy:last.cumulativeChinhLy, cumulativeChinhLyPhase1:last.cumulativeChinhLyPhase1, cumulativeChinhLyPhase2:last.cumulativeChinhLyPhase2, cumulativeChinhLyPhase3:last.cumulativeChinhLyPhase3,
-    date:last.date, source:'daily'
+    date:last.date, submittedAt:last.submittedAt, source:'daily'
   };
 }
 
@@ -1261,6 +1290,7 @@ function renderAdmin(){
     const cumulativeChinhLyPhase2 = latest ? latest.cumulativeChinhLyPhase2 : 0;
     const cumulativeChinhLyPhase3 = latest ? latest.cumulativeChinhLyPhase3 : 0;
     const lastDate = latest ? latest.date : null;
+    const lastSubmittedAt = latest ? latest.submittedAt : null;
     const gapDays = lastDate ? daysBetween(lastDate, todayISO()) : null;
     let status = 'never';
     if(gapDays !== null){
@@ -1270,7 +1300,7 @@ function renderAdmin(){
     }
     const target = unitTotalTarget(u);
     const pct = target>0 ? Math.min(100, (cumulative/target)*100) : 0;
-    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, cumulativeChinhLy, cumulativeChinhLyPhase1, cumulativeChinhLyPhase2, cumulativeChinhLyPhase3, lastDate, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
+    return {...u, target, cumulative, cumulativePhase1, cumulativePhase2, cumulativePhase3, cumulativeChinhLy, cumulativeChinhLyPhase1, cumulativeChinhLyPhase2, cumulativeChinhLyPhase3, lastDate, lastSubmittedAt, gapDays, status, pct, dailyCount:data.dailyReports.length, orgsCount:(data.completedOrgs||[]).length};
   });
   unitsWithStatusCache = unitsWithStatus; // để các ô tìm kiếm tự render lại khi gõ, không cần tính lại từ đầu
 
@@ -1283,9 +1313,10 @@ function renderAdmin(){
     return data && data.dailyReports.some(r=>r.date===todayISO());
   }).length;
   const staleUnits = unitsWithStatus.filter(u=>u.status==='late' || u.status==='never').length;
+  const overTargetUnitsCount = unitsWithStatus.filter(u=>overTargetIssues(u).length>0).length;
 
   const safeRender = (fn, label) => { try{ fn(); }catch(e){ console.error('Lỗi khi vẽ ' + label, e); } };
-  safeRender(()=>renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted), 'KPI');
+  safeRender(()=>renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitsWithStatus.length, totalOrgsCompleted, overTargetUnitsCount), 'KPI');
   safeRender(()=>renderRoadmap(totalCumulative, unitsWithStatus), 'lộ trình');
   safeRender(()=>renderIssuesFeed(), 'danh sách vướng mắc');
   safeRender(()=>renderUnitTable(unitsWithStatus), 'bảng đơn vị');
@@ -1297,7 +1328,7 @@ function renderAdmin(){
   safeRender(()=>renderAllUnitsChart(unitsWithStatus), 'biểu đồ so sánh tất cả đơn vị');
 }
 
-function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted){
+function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reportedToday, staleUnits, unitCount, totalOrgsCompleted, overTargetUnitsCount){
   const phaseIdx = currentPhaseIndex();
   const phase = PHASES[phaseIdx];
   const cumulativeTargetToPhase = PHASES.slice(0,phaseIdx+1).reduce((s,p)=>s+p.target,0);
@@ -1310,9 +1341,10 @@ function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reported
     {label:'Đơn vị đã báo cáo hôm nay', value: `${reportedToday}`, extra: `/ ${unitCount} đơn vị`},
     {label:phase.label + ' — còn lại', value: daysLeft>=0? daysLeft+' ngày' : 'Quá hạn', extra: 'đến hạn ' + fmtDate(phase.deadline)},
     {label:'Đơn vị cần đôn đốc', value: `${staleUnits}`, extra:'chưa cập nhật > 14 ngày hoặc chưa báo cáo'},
+    {label:'Đơn vị có số liệu vượt chỉ tiêu', value: `${overTargetUnitsCount}`, extra: overTargetUnitsCount>0 ? '⚠ số đã scan/chỉnh lý vượt chỉ tiêu giai đoạn — cần kiểm tra lại' : 'Không phát hiện bất thường', danger: overTargetUnitsCount>0},
   ];
   document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
-    <div class="kpi">
+    <div class="kpi${k.danger?' kpi-danger':''}">
       <div class="label">${k.label}</div>
       <div class="value">${k.value}</div>
       <div class="delta">${k.extra}</div>
@@ -1323,6 +1355,18 @@ function renderKPIs(totalCumulative, totalChinhLy, totalTargetAssigned, reported
 function fmtDate(iso){
   const [y,m,d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+function fmtDateTime(dateISO, submittedAt){
+  // Báo cáo cũ (trước khi lưu submittedAt) chỉ có ngày — hiển thị ngày như trước.
+  // Báo cáo có submittedAt thì hiện thêm giờ:phút nộp, theo giờ Việt Nam.
+  if(!dateISO) return '—';
+  if(!submittedAt) return fmtDate(dateISO);
+  try{
+    const d = new Date(submittedAt);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${fmtDate(dateISO)} ${hh}:${mm}`;
+  }catch(e){ return fmtDate(dateISO); }
 }
 
 function renderRoadmap(totalCumulative, units){
@@ -1563,14 +1607,14 @@ function renderUnitTable(units){
         const t = unitPhaseTarget(u,p.id);
         const fill = u['cumulativePhase'+p.id] || 0;
         const pct = t>0 ? Math.min(100,(fill/t)*100) : 0;
-        return `<td class="num"><div class="cell-progress"><span class="progress-mini"><div style="width:${pct}%"></div></span>${fmtNum(fill)} / ${fmtNum(t)}</div></td>`;
+        return `<td class="num"><div class="cell-progress"><span class="progress-mini"><div style="width:${pct}%"></div></span>${overTargetCell(fill, t, 'Số đã số hóa (scan) vượt chỉ tiêu ' + p.label + ' — kiểm tra lại số liệu đã nhập')}</div></td>`;
       }).join('');
       return `<tr>
         <td>${escapeHTML(u.name)}</td>
         <td class="num">${fmtNum(u.target)}</td>
         ${phaseCells}
         <td class="num">${fmtNum(u.orgsCount)}</td>
-        <td>${u.lastDate ? fmtDate(u.lastDate.replace(/-28$/,'') ) : '—'}</td>
+        <td>${u.lastDate ? fmtDateTime(u.lastDate.replace(/-28$/,''), u.lastSubmittedAt) : '—'}</td>
         <td><span class="status-pill ${s.cls}">${s.text}</span></td>
       </tr>`;
     }).join('')}
@@ -1590,7 +1634,7 @@ function renderUnitPhaseTable(units){
       const t = unitPhaseTarget(u,p.id);
       const fill = u['cumulativeChinhLyPhase'+p.id] || 0;
       const pct = t>0 ? Math.min(100,(fill/t)*100) : 0;
-      return `<td><span class="progress-mini"><div style="width:${pct}%"></div></span>${fmtNum(fill)} / ${fmtNum(t)}</td>`;
+      return `<td><span class="progress-mini"><div style="width:${pct}%"></div></span>${overTargetCell(fill, t, 'Số đã chỉnh lý vượt chỉ tiêu ' + p.label + ' — kiểm tra lại số liệu đã nhập')}</td>`;
     }).join('');
     return `<tr><td>${escapeHTML(u.name)}</td>${cells}</tr>`;
   }).join('')}
@@ -1614,10 +1658,12 @@ function renderChinhLyVsSoHoaTable(units){
     const gap = u.cumulativeChinhLy - u.cumulative;
     const ratio = u.cumulativeChinhLy>0 ? Math.min(100,(u.cumulative/u.cumulativeChinhLy)*100) : (u.cumulative>0 ? 100 : 0);
     const gapCls = gap < 0 ? 'badge-late' : (gap>0 ? 'badge-warn' : 'badge-ontime');
+    const clOver = u.target>0 && u.cumulativeChinhLy > u.target;
+    const shOver = u.target>0 && u.cumulative > u.target;
     return `<tr>
       <td>${escapeHTML(u.name)}</td>
-      <td class="num">${fmtNum(u.cumulativeChinhLy)}</td>
-      <td class="num">${fmtNum(u.cumulative)}</td>
+      <td class="num"><span class="${clOver?'over-target':''}">${fmtNum(u.cumulativeChinhLy)}</span>${clOver?` <span class="warn-icon" title="Tổng đã chỉnh lý vượt tổng chỉ tiêu đơn vị (${fmtNum(u.target)}) — kiểm tra lại số liệu đã nhập">⚠</span>`:''}</td>
+      <td class="num"><span class="${shOver?'over-target':''}">${fmtNum(u.cumulative)}</span>${shOver?` <span class="warn-icon" title="Tổng đã số hóa vượt tổng chỉ tiêu đơn vị (${fmtNum(u.target)}) — kiểm tra lại số liệu đã nhập">⚠</span>`:''}</td>
       <td class="num"><span class="status-pill ${gapCls}">${gap>0?'+':''}${fmtNum(gap)}</span></td>
       <td><span class="progress-mini"><div style="width:${ratio}%"></div></span>${ratio.toFixed(0)}%</td>
     </tr>`;
@@ -1725,6 +1771,119 @@ async function addUnit(){
     renderUnitManage();
     renderAdmin();
   }
+}
+
+/* ---------- Xuất báo cáo Excel theo đúng mẫu "THỐNG KÊ SỐ LƯỢNG SỐ HÓA, CHỈNH LÝ
+   HỒ SƠ ĐẢNG VIÊN": tiêu đề gộp ô, 2 dòng tiêu đề cột gộp (STT | Đơn vị | Tổng số hồ sơ
+   cần số hóa | Đã chỉnh lý | Đã số hóa (Scan) chia theo giai đoạn 1/2/3 | Ghi chú), viền
+   quanh từng ô, font Times New Roman — số liệu lấy trực tiếp từ unitsCache/unitDataCache
+   đang hiển thị trên trang (cùng công thức lũy kế dùng ở renderAdmin), không dùng số mẫu. */
+async function exportThongKeExcel(){
+  if(typeof ExcelJS === 'undefined'){
+    showToast('Đang tải thư viện xuất Excel — thử lại sau 1-2 giây');
+    return;
+  }
+  if(!unitsCache || unitsCache.length===0){
+    showToast('Chưa có dữ liệu đơn vị để xuất báo cáo');
+    return;
+  }
+
+  const now = new Date();
+  const gio = now.getHours();
+  const phut = now.getMinutes();
+  const ngayStr = now.toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit', year:'numeric'});
+  const thoiDiemStr = 'Tính đến thời điểm ' + gio + ' giờ' + (phut>0 ? ' ' + phut + ' phút' : '') + ', ngày ' + ngayStr;
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('thong-ke-so-hoa-chinh-ly', {views:[{state:'frozen', ySplit:5}]});
+
+  ws.columns = [
+    {width:9.14}, {width:30.71}, {width:9.14}, {width:12}, {width:13.14}, {width:15}, {width:15.14}, {width:34.71}
+  ];
+
+  const thin = {style:'thin', color:{argb:'FF000000'}};
+  const allBorder = {top:thin, left:thin, bottom:thin, right:thin};
+  const baseFont = {name:'Times New Roman', size:12};
+
+  // Dòng 1-2: tiêu đề gộp A1:H2
+  ws.mergeCells('A1:H2');
+  const titleCell = ws.getCell('A1');
+  titleCell.value = 'THỐNG KÊ SỐ LƯỢNG SỐ HÓA, CHỈNH LÝ HỒ SƠ ĐẢNG VIÊN \n(' + thoiDiemStr + ')';
+  titleCell.font = {name:'Times New Roman', size:14, bold:true};
+  titleCell.alignment = {horizontal:'center', vertical:'top', wrapText:true};
+  ws.getRow(1).height = 15;
+  ws.getRow(2).height = 31.5;
+
+  // Dòng 3: dòng trống ngăn cách
+  ws.getRow(3).height = 18.75;
+
+  // Dòng 4-5: tiêu đề cột (gộp dọc các cột đơn, gộp ngang 3 cột giai đoạn).
+  // QUAN TRỌNG: ExcelJS coi cả vùng gộp dùng chung 1 giá trị — chỉ được set .value
+  // trên đúng ô "chủ" (ô trên-cùng-trái) của mỗi vùng gộp; set .value (kể cả chuỗi
+  // rỗng '') vào bất kỳ ô "con" nào trong vùng gộp sẽ GHI ĐÈ NGƯỢC lên ô chủ và xóa
+  // mất chữ đã gán (đây là nguyên nhân bảng xuất ra trước đó bị mất tiêu đề STT/Đơn vị/...).
+  ws.mergeCells('A4:A5'); ws.mergeCells('B4:B5'); ws.mergeCells('C4:C5');
+  ws.mergeCells('D4:D5'); ws.mergeCells('E4:G4'); ws.mergeCells('H4:H5');
+  ws.getCell('A4').value = 'STT';
+  ws.getCell('B4').value = 'Đơn vị\n(Đảng bộ trực thuộc Thành ủy)';
+  ws.getCell('C4').value = 'Tổng số hồ sơ đảng viên cần số hóa';
+  ws.getCell('D4').value = 'Số hồ sơ đảng viên đã được chỉnh lý';
+  ws.getCell('E4').value = 'Số hồ sơ đảng viên đã số hóa (Scan) \nchia theo giai đoạn'; // ô chủ của E4:G4 — KHÔNG set F4, G4
+  ws.getCell('H4').value = 'Ghi chú';
+  ws.getCell('E5').value = 'Giai đoạn 1\n'; // E5/F5/G5 không nằm trong vùng gộp nào -> set trực tiếp bình thường
+  ws.getCell('F5').value = 'Giai đoạn 2';
+  ws.getCell('G5').value = 'Giai đoạn 3';
+  ws.getRow(4).height = 33;
+  ws.getRow(5).height = 63;
+  [4,5].forEach(r=>{
+    ws.getRow(r).eachCell({includeEmpty:true}, cell=>{
+      cell.font = {name:'Times New Roman', size:12, bold:true};
+      cell.alignment = {horizontal:'center', vertical:'center', wrapText:true};
+      cell.border = allBorder;
+    });
+  });
+
+  // Dữ liệu: dùng đúng công thức lũy kế/chỉ tiêu đang dùng ở bảng chính trên trang
+  let stt = 1;
+  unitsCache.forEach(u=>{
+    const data = unitDataCache[u.id] || {dailyReports:[], monthlyNotes:[], completedOrgs:[]};
+    const latest = getLatestCumulative(data);
+    const cumulativeChinhLy = latest ? latest.cumulativeChinhLy : 0;
+    const target = unitTotalTarget(u);
+
+    const ghiChuParts = [];
+    const phaseCells = PHASES.map(p=>{
+      const scanned = latest ? (latest['cumulativePhase'+p.id] || 0) : 0;
+      const phaseTarget = unitPhaseTarget(u, p.id);
+      if(phaseTarget>0 && scanned>=phaseTarget){
+        ghiChuParts.push('đã hoàn thành số hóa hồ sơ giai đoạn ' + p.id);
+      }
+      return fmtNum(scanned) + ' / ' + fmtNum(phaseTarget);
+    });
+
+    const rowIdx = 5 + stt; // dữ liệu bắt đầu từ dòng 6
+    const rowValues = [stt, u.name, fmtNum(target), fmtNum(cumulativeChinhLy), phaseCells[0], phaseCells[1], phaseCells[2], ghiChuParts.join('; ')];
+    const row = ws.getRow(rowIdx);
+    rowValues.forEach((v,i)=>{ row.getCell(i+1).value = v; });
+    row.eachCell({includeEmpty:true}, (cell, colNum)=>{
+      cell.font = baseFont;
+      cell.border = allBorder;
+      cell.alignment = colNum===2 ? {horizontal:'left', vertical:'center', wrapText:true}
+        : colNum===8 ? {horizontal:'left', vertical:'center', wrapText:true}
+        : {horizontal:'center', vertical:'center', wrapText:true};
+    });
+    stt++;
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fileDate = now.toISOString().slice(0,10);
+  a.href = url; a.download = 'thong-ke-so-hoa-chinh-ly-ho-so-dang-vien_' + fileDate + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Đã xuất báo cáo Excel (' + (stt-1) + ' đơn vị)');
 }
 
 function exportCSV(){
