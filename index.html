@@ -721,6 +721,22 @@ tr.flash-row td{animation:flash-row 2.2s ease-out;}
 }
 .sweep-beam::before{content:"";position:absolute;right:2px;top:0;bottom:0;width:150px;background:linear-gradient(90deg,transparent,rgba(227,198,119,.2));}
 
+/* Nhập nhanh chỉ tiêu từ Excel */
+.import-box{border:1px dashed var(--gold-600);background:var(--gold-50);border-radius:var(--r);padding:14px 16px;margin:0 0 16px;}
+.import-box h3{margin:0 0 4px;font-size:17.5px;color:var(--crimson-800);}
+.import-box .sub{margin-bottom:10px;}
+.import-box textarea{background:#fff;font-size:15px;min-height:110px;}
+.import-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.import-actions label.btn{cursor:pointer;}
+.import-sum{display:flex;gap:8px 18px;flex-wrap:wrap;margin:14px 0 8px;font-size:15.5px;}
+.import-sum b{color:var(--ink);}
+.import-sum .bad{color:var(--err);}
+.import-box .table-scroll{max-height:340px;overflow:auto;background:#fff;}
+.import-box td.st-new{color:var(--ok);font-weight:700;}
+.import-box td.st-upd{color:var(--crimson-700);font-weight:700;}
+.import-box td.st-same{color:var(--ink-3);}
+.import-errors{margin:8px 0 0;padding-left:18px;color:var(--err);font-size:14.5px;}
+
 /* Người dùng đặt "giảm chuyển động": tắt hiệu ứng, số liệu hiện ngay giá trị cuối */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto;}
@@ -773,7 +789,7 @@ tr.flash-row td{animation:flash-row 2.2s ease-out;}
         <div class="hero-text">
           <span class="org-tag"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg>Ban Tổ chức Thành ủy</span>
           <h1>Bảng điều khiển tiến độ số hóa hồ sơ đảng viên</h1>
-          <p>Theo dõi tiến độ số hóa, tạo lập dữ liệu đảng viên, hồ sơ đảng viên điện tử theo Kế hoạch số hóa của Ban Thường vụ Thành ủy Đồng Nai — 134.637 hồ sơ, triển khai theo Giai đoạn 1 và 2, hoàn thành trước ngày 31/12/2026.</p>
+          <p>Theo dõi tiến độ số hóa, tạo lập dữ liệu đảng viên, hồ sơ đảng viên điện tử theo Kế hoạch số hóa của Ban Thường vụ Thành ủy Đồng Nai — 137.209 hồ sơ, triển khai theo Giai đoạn 1 và 2, hoàn thành trước ngày 31/12/2026.</p>
         </div>
         <div class="hero-side">
           <div class="conn checking" id="connStatus"><span class="dot"></span><span id="lastRefresh">Đang tải dữ liệu…</span></div>
@@ -782,12 +798,12 @@ tr.flash-row td{animation:flash-row 2.2s ease-out;}
       </div>
       <div class="hero-gauge" id="heroGauge" role="group" aria-label="Tiến độ toàn Thành phố so với mục tiêu chung">
         <div class="gauge" data-g="scan">
-          <div class="gauge-top"><span class="gauge-name">Đã số hóa (scan)</span><span class="gauge-fig"><b class="g-val">0</b> / <span class="g-tgt">134.637</span> hồ sơ</span><span class="gauge-pct g-pct">0%</span></div>
+          <div class="gauge-top"><span class="gauge-name">Đã số hóa (scan)</span><span class="gauge-fig"><b class="g-val">0</b> / <span class="g-tgt">137.209</span> hồ sơ</span><span class="gauge-pct g-pct">0%</span></div>
           <div class="gauge-track"><div class="gauge-fill" data-bar="0" data-k="hero:scan:bar"></div></div>
           <div class="gauge-ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <div class="gauge" data-g="cl">
-          <div class="gauge-top"><span class="gauge-name">Đã chỉnh lý</span><span class="gauge-fig"><b class="g-val">0</b> / <span class="g-tgt">134.637</span> hồ sơ</span><span class="gauge-pct g-pct">0%</span></div>
+          <div class="gauge-top"><span class="gauge-name">Đã chỉnh lý</span><span class="gauge-fig"><b class="g-val">0</b> / <span class="g-tgt">137.209</span> hồ sơ</span><span class="gauge-pct g-pct">0%</span></div>
           <div class="gauge-track"><div class="gauge-fill" data-bar="0" data-k="hero:cl:bar"></div></div>
           <div class="gauge-ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
@@ -991,7 +1007,18 @@ tr.flash-row td{animation:flash-row 2.2s ease-out;}
     <div class="card unit-manage-card section" id="unitManageCard" style="display:none;">
       <h2>Quản lý đơn vị</h2>
       <p class="sub" style="margin-bottom:14px;">Thêm, sửa tên đơn vị và chỉ tiêu số hồ sơ được giao. Thay đổi áp dụng ngay cho toàn bộ dashboard; đơn vị có lũy kế vượt chỉ tiêu mới sẽ bị khóa nộp báo cáo cho đến khi điều chỉnh.</p>
-      <button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="resetToOfficialList()">Bổ sung đơn vị / chỉ tiêu chính thức còn thiếu (không mất dữ liệu cũ)</button>
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="resetToOfficialList()">Áp dụng danh sách và chỉ tiêu chính thức (137.209 hồ sơ, 101 đơn vị)</button>
+      <div class="import-box">
+        <h3>Nhập nhanh chỉ tiêu từ Excel</h3>
+        <p class="sub">Sao chép hai cột (Tên đơn vị, Chỉ tiêu) trong Excel rồi dán vào ô dưới đây, hoặc chọn tệp .xlsx/.csv. Tên trùng với đơn vị đã có thì cập nhật chỉ tiêu; tên chưa có thì thêm đơn vị mới. Kết quả được hiển thị để kiểm tra trước khi áp dụng.</p>
+        <textarea id="importText" rows="5" placeholder="Đảng bộ phường An Lộc&#9;956&#10;Đảng bộ phường Bảo Vinh&#9;759&#10;…" oninput="previewImport()"></textarea>
+        <div class="import-actions">
+          <label class="btn btn-ghost btn-sm" for="importFile">Chọn tệp Excel/CSV</label>
+          <input type="file" id="importFile" accept=".xlsx,.csv,.txt" hidden onchange="loadImportFile(this)">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="clearImport()">Xóa nội dung</button>
+        </div>
+        <div id="importPreview" class="mh"></div>
+      </div>
       <div class="table-scroll tall" id="unitManageArea"></div>
       <div class="field" style="margin-top:16px;">
         <label for="newUnitName">Tên đơn vị mới</label>
@@ -1047,9 +1074,9 @@ tr.flash-row td{animation:flash-row 2.2s ease-out;}
 
 /* ---------- Hằng số theo Kế hoạch số hóa hồ sơ đảng viên ---------- */
 /* Kế hoạch gộp Giai đoạn 1 và Giai đoạn 2 thành một giai đoạn; không theo dõi Giai đoạn 3.
-   Chỉ tiêu mục tiêu chung = 13.305 (GĐ1) + 121.332 (GĐ2). Hạn hoàn thành lấy theo mốc cuối của Giai đoạn 2. */
+   Chỉ tiêu mục tiêu chung = 137.209 hồ sơ (tổng chỉ tiêu 101 đơn vị theo danh sách chính thức). Hạn hoàn thành lấy theo mốc cuối của Giai đoạn 2. */
 const PHASES = [
-  {id:1, label:'Giai đoạn 1 và 2', desc:'Hồ sơ cán bộ diện cấp ủy các cấp quản lý, cán bộ lãnh đạo, quản lý chủ chốt; hồ sơ đang sử dụng thường xuyên trong công tác tổ chức cán bộ, quản lý đảng viên', target:134637, deadline:'2026-12-31'}
+  {id:1, label:'Giai đoạn 1 và 2', desc:'Hồ sơ cán bộ diện cấp ủy các cấp quản lý, cán bộ lãnh đạo, quản lý chủ chốt; hồ sơ đang sử dụng thường xuyên trong công tác tổ chức cán bộ, quản lý đảng viên', target:137209, deadline:'2026-12-31'}
 ];
 function phaseLabel(id){ const p = PHASES.find(x=>x.id===id); return p ? p.label : ('Giai đoạn ' + id); }
 const TOTAL_TARGET = PHASES.reduce((s,p)=>s+p.target,0);
@@ -1082,112 +1109,114 @@ const OFFICIAL_UNIT_NAMES = [
   "Xã Tân Quan","Xã Tân Tiến","Xã Thanh Sơn","Xã Thiện Hưng","Xã Thọ Sơn",
   "Xã Thống Nhất","Xã Thuận Lợi","Xã Xuân Bắc","Xã Xuân Định","Xã Xuân Đông",
   "Xã Xuân Đường","Xã Xuân Hòa","Xã Xuân Phú","Xã Xuân Quế","Xã Xuân Thành",
-  "Đảng bộ Cơ quan Đảng Thành phố","Đảng bộ UBND Thành phố","Đảng bộ Công an Thành phố","Đảng bộ Quân sự Thành phố"
+  "Đảng bộ các cơ quan Đảng Thành phố Đồng Nai","Đảng bộ UBND Thành phố Đồng Nai","Đảng bộ Công an Thành phố Đồng Nai","Đảng bộ Quân sự Thành phố Đồng Nai","Đảng bộ Mặt trận Tổ quốc, các đoàn thể thành phố Đồng Nai",
+  "Đảng bộ Hội đồng nhân dân Thành phố Đồng Nai"
 ];
-/* Chỉ tiêu chính thức từng đơn vị theo Kế hoạch (Giai đoạn 1 = hồ sơ ưu tiên 1+2: cán bộ diện
-   cấp ủy quản lý, cán bộ lãnh đạo/quản lý chủ chốt; Giai đoạn 2 = hồ sơ ưu tiên 3: hồ sơ đang
-   sử dụng thường xuyên; Giai đoạn 3 = hồ sơ ưu tiên 4: còn lại — từ trần, xóa tên, khai trừ...).
-   Thứ tự khớp với OFFICIAL_UNIT_NAMES ở trên. */
+/* Tên cũ của một số đảng bộ trực thuộc, dùng để nhận diện khi áp dụng chỉ tiêu cho dữ liệu đã lưu. */
+const OFFICIAL_UNIT_ALIASES = {"Đảng bộ các cơ quan Đảng Thành phố Đồng Nai":"Đảng bộ Cơ quan Đảng Thành phố","Đảng bộ UBND Thành phố Đồng Nai":"Đảng bộ UBND Thành phố","Đảng bộ Công an Thành phố Đồng Nai":"Đảng bộ Công an Thành phố","Đảng bộ Quân sự Thành phố Đồng Nai":"Đảng bộ Quân sự Thành phố"};
+/* Chỉ tiêu số hồ sơ đảng viên cần số hóa của từng đơn vị (Giai đoạn 1 và 2 gộp; tổng 137.209). Thứ tự khớp với OFFICIAL_UNIT_NAMES. */
 const OFFICIAL_UNIT_TARGETS = [
-  {1:52,2:876,3:11},
-  {1:46,2:715,3:77},
-  {1:86,2:1582,3:30},
-  {1:117,2:1193,3:150},
-  {1:123,2:1588,3:18},
-  {1:241,2:4180,3:880},
-  {1:64,2:971,3:35},
-  {1:180,2:1461,3:14},
-  {1:131,2:1145,3:171},
-  {1:120,2:973,3:8},
-  {1:64,2:641,3:0},
-  {1:141,2:918,3:8},
-  {1:191,2:2014,3:170},
-  {1:197,2:2937,3:24},
-  {1:176,2:2467,3:44},
-  {1:160,2:2593,3:1219},
-  {1:174,2:2822,3:1300},
-  {1:43,2:586,3:39},
-  {1:188,2:2281,3:856},
-  {1:111,2:831,3:926},
-  {1:112,2:1101,3:144},
-  {1:87,2:1053,3:67},
-  {1:237,2:5217,3:50},
-  {1:116,2:1662,3:3},
-  {1:111,2:789,3:164},
-  {1:165,2:1288,3:357},
-  {1:221,2:3243,3:28},
-  {1:256,2:8695,3:2274},
-  {1:141,2:2010,3:625},
-  {1:150,2:2610,3:400},
-  {1:79,2:1552,3:289},
-  {1:109,2:1323,3:59},
-  {1:168,2:2461,3:21},
-  {1:96,2:1401,3:183},
-  {1:35,2:596,3:58},
-  {1:102,2:562,3:6},
-  {1:92,2:798,3:250},
-  {1:73,2:837,3:89},
-  {1:99,2:707,3:55},
-  {1:51,2:420,3:71},
-  {1:130,2:1087,3:266},
-  {1:60,2:258,3:21},
-  {1:42,2:1276,3:15},
-  {1:95,2:559,3:73},
-  {1:106,2:930,3:19},
-  {1:44,2:315,3:48},
-  {1:80,2:433,3:85},
-  {1:83,2:282,3:47},
-  {1:219,2:1973,3:27},
-  {1:119,2:701,3:118},
-  {1:120,2:662,3:28},
-  {1:85,2:294,3:34},
-  {1:75,2:642,3:50},
-  {1:104,2:726,3:10},
-  {1:126,2:355,3:45},
-  {1:87,2:377,3:40},
-  {1:79,2:486,3:50},
-  {1:123,2:229,3:21},
-  {1:39,2:239,3:12},
-  {1:107,2:948,3:50},
-  {1:107,2:948,3:50},
-  {1:111,2:325,3:45},
-  {1:161,2:560,3:20},
-  {1:122,2:644,3:126},
-  {1:136,2:335,3:8},
-  {1:80,2:427,3:25},
-  {1:57,2:802,3:29},
-  {1:80,2:253,3:15},
-  {1:105,2:472,3:65},
-  {1:180,2:2024,3:20},
-  {1:66,2:292,3:7},
-  {1:76,2:342,3:3},
-  {1:74,2:429,3:525},
-  {1:69,2:702,3:31},
-  {1:110,2:960,3:45},
-  {1:77,2:925,3:178},
-  {1:84,2:681,3:136},
-  {1:101,2:563,3:15},
-  {1:75,2:559,3:85},
-  {1:95,2:354,3:50},
-  {1:96,2:633,3:7},
-  {1:100,2:614,3:107},
-  {1:76,2:385,3:15},
-  {1:171,2:969,3:6},
-  {1:76,2:530,3:5},
-  {1:63,2:769,3:17},
-  {1:120,2:898,3:106},
-  {1:43,2:664,3:8},
-  {1:81,2:688,3:28},
-  {1:112,2:1079,3:15},
-  {1:67,2:574,3:65},
-  {1:125,2:1025,3:21},
-  {1:86,2:570,3:100},
-  {1:65,2:428,3:4},
-  {1:65,2:535,3:104},
-  {1:135,2:1842,3:39},
-  {1:493,2:10677,3:278},
-  {1:209,2:3207,3:70},
-  {1:473,2:1014,3:30}
+  {1:956,2:0,3:0},
+  {1:759,2:0,3:0},
+  {1:1678,2:0,3:0},
+  {1:1313,2:0,3:0},
+  {1:1706,2:0,3:0},
+  {1:4549,2:0,3:0},
+  {1:1187,2:0,3:0},
+  {1:1657,2:0,3:0},
+  {1:1291,2:0,3:0},
+  {1:1098,2:0,3:0},
+  {1:716,2:0,3:0},
+  {1:1108,2:0,3:0},
+  {1:2197,2:0,3:0},
+  {1:3206,2:0,3:0},
+  {1:2479,2:0,3:0},
+  {1:2767,2:0,3:0},
+  {1:2901,2:0,3:0},
+  {1:680,2:0,3:0},
+  {1:2551,2:0,3:0},
+  {1:942,2:0,3:0},
+  {1:1322,2:0,3:0},
+  {1:1155,2:0,3:0},
+  {1:5675,2:0,3:0},
+  {1:1812,2:0,3:0},
+  {1:936,2:0,3:0},
+  {1:1568,2:0,3:0},
+  {1:3538,2:0,3:0},
+  {1:8907,2:0,3:0},
+  {1:2252,2:0,3:0},
+  {1:2780,2:0,3:0},
+  {1:1615,2:0,3:0},
+  {1:1458,2:0,3:0},
+  {1:2639,2:0,3:0},
+  {1:1503,2:0,3:0},
+  {1:680,2:0,3:0},
+  {1:683,2:0,3:0},
+  {1:1011,2:0,3:0},
+  {1:914,2:0,3:0},
+  {1:809,2:0,3:0},
+  {1:471,2:0,3:0},
+  {1:1304,2:0,3:0},
+  {1:319,2:0,3:0},
+  {1:1434,2:0,3:0},
+  {1:669,2:0,3:0},
+  {1:1080,2:0,3:0},
+  {1:359,2:0,3:0},
+  {1:511,2:0,3:0},
+  {1:366,2:0,3:0},
+  {1:2347,2:0,3:0},
+  {1:816,2:0,3:0},
+  {1:771,2:0,3:0},
+  {1:392,2:0,3:0},
+  {1:767,2:0,3:0},
+  {1:851,2:0,3:0},
+  {1:484,2:0,3:0},
+  {1:506,2:0,3:0},
+  {1:573,2:0,3:0},
+  {1:325,2:0,3:0},
+  {1:227,2:0,3:0},
+  {1:662,2:0,3:0},
+  {1:1069,2:0,3:0},
+  {1:440,2:0,3:0},
+  {1:730,2:0,3:0},
+  {1:777,2:0,3:0},
+  {1:767,2:0,3:0},
+  {1:520,2:0,3:0},
+  {1:861,2:0,3:0},
+  {1:350,2:0,3:0},
+  {1:580,2:0,3:0},
+  {1:2045,2:0,3:0},
+  {1:361,2:0,3:0},
+  {1:424,2:0,3:0},
+  {1:1014,2:0,3:0},
+  {1:770,2:0,3:0},
+  {1:1073,2:0,3:0},
+  {1:1003,2:0,3:0},
+  {1:768,2:0,3:0},
+  {1:664,2:0,3:0},
+  {1:637,2:0,3:0},
+  {1:447,2:0,3:0},
+  {1:740,2:0,3:0},
+  {1:718,2:0,3:0},
+  {1:472,2:0,3:0},
+  {1:1136,2:0,3:0},
+  {1:595,2:0,3:0},
+  {1:840,2:0,3:0},
+  {1:1023,2:0,3:0},
+  {1:716,2:0,3:0},
+  {1:780,2:0,3:0},
+  {1:1199,2:0,3:0},
+  {1:646,2:0,3:0},
+  {1:1144,2:0,3:0},
+  {1:661,2:0,3:0},
+  {1:509,2:0,3:0},
+  {1:609,2:0,3:0},
+  {1:1472,2:0,3:0},
+  {1:11240,2:0,3:0},
+  {1:3254,2:0,3:0},
+  {1:1414,2:0,3:0},
+  {1:455,2:0,3:0},
+  {1:54,2:0,3:0}
 ];
 const SAMPLE_UNITS = OFFICIAL_UNIT_NAMES.map((name,i)=>({id:'u'+String(i+1).padStart(2,'0'), name, targets:{...OFFICIAL_UNIT_TARGETS[i]}}));
 
@@ -3422,28 +3451,170 @@ async function deleteUnit(uid){
   } else showToast('Lỗi khi lưu — kiểm tra kết nối Google Sheet', 'error');
 }
 
+/* Chuẩn hóa tên để đối chiếu: bỏ tiền tố "Đảng bộ"/"Đảng ủy", không phân biệt hoa thường */
+function normUnitName(n){
+  return String(n||'').normalize('NFC').toLowerCase().replace(/\s+/g,' ').trim().replace(/^đảng (bộ|ủy) /, '');
+}
 async function resetToOfficialList(){
-  // Chỉ bổ sung đơn vị còn thiếu và điền chỉ tiêu chính thức cho đơn vị đang để trống (0/0/0); không ghi đè dữ liệu đã có.
-  if(!confirm('Bổ sung các đơn vị còn thiếu trong danh sách 99 phường/xã, đảng bộ trực thuộc chính thức, và điền chỉ tiêu chính thức theo Kế hoạch cho đơn vị đang để trống. Các đơn vị đã có chỉ tiêu sẽ được giữ nguyên, không bị mất dữ liệu. Tiếp tục?')) return;
-  const byName = new Map(unitsCache.map(u=>[u.name, u]));
-  let added = 0, filled = 0;
+  // Áp dụng danh sách và chỉ tiêu chính thức: ghi đè chỉ tiêu của đơn vị trùng tên, thêm đơn vị còn thiếu.
+  // Không xóa đơn vị nào và không đụng tới số liệu báo cáo đã nhập.
+  const total = OFFICIAL_UNIT_TARGETS.reduce((s,t)=>s+(t[1]||0),0);
+  if(!confirm('Áp dụng danh sách ' + OFFICIAL_UNIT_NAMES.length + ' đơn vị và chỉ tiêu chính thức (tổng ' + fmtNum(total) + ' hồ sơ).\n\nChỉ tiêu của các đơn vị trùng tên sẽ được ghi đè theo danh sách; đơn vị còn thiếu sẽ được thêm mới. Không xóa đơn vị và không mất số liệu báo cáo đã nhập; đơn vị có lũy kế vượt chỉ tiêu mới sẽ bị khóa nộp báo cáo cho đến khi điều chỉnh.\n\nTiếp tục?')) return;
+  const byKey = new Map(unitsCache.map(u=>[normUnitName(u.name), u]));
+  let added = 0, updated = 0, renamed = 0;
   OFFICIAL_UNIT_NAMES.forEach((name, i) => {
     const official = OFFICIAL_UNIT_TARGETS[i];
-    const existing = byName.get(name);
+    const alias = OFFICIAL_UNIT_ALIASES[name];
+    const existing = byKey.get(normUnitName(name)) || (alias ? byKey.get(normUnitName(alias)) : null);
     if(!existing){
       unitsCache.push({id:'u'+String(i+1).padStart(2,'0'), name, targets:Object.assign({}, official)});
       added++;
     } else {
-      const t = existing.targets || {1:0,2:0,3:0};
-      if(!(t[1]||t[2]||t[3])){ existing.targets = Object.assign({}, official); filled++; }
+      const cur = unitTotalTarget(existing);
+      if(existing.name !== name && alias && normUnitName(existing.name) === normUnitName(alias)){ existing.name = name; renamed++; }
+      if(cur !== official[1]) updated++;
+      existing.targets = Object.assign({}, official);
     }
   });
   const ok = await setJSON('config:units', true, unitsCache);
   if(ok){
     for(const u of unitsCache){ if(!unitDataCache[u.id]) unitDataCache[u.id] = await loadUnitData(u.id); }
-    showToast('Đã cập nhật: thêm ' + added + ' đơn vị, điền chỉ tiêu cho ' + filled + ' đơn vị — không mất dữ liệu cũ');
-    saveLocalCache(); populateUnitSelect(); renderUnitView(); renderAdmin();
+    showToast('Đã áp dụng chỉ tiêu: điều chỉnh ' + updated + ' đơn vị, thêm mới ' + added + (renamed ? ', cập nhật tên ' + renamed : '') + ' — không mất số liệu báo cáo');
+    saveLocalCache(); populateUnitSelect(); renderUnitView(); renderUnitManage(); renderAdmin();
   } else showToast('Lỗi khi lưu — thử lại', 'error');
+}
+
+/* ---------- Nhập nhanh chỉ tiêu từ Excel (dán hoặc chọn tệp) ---------- */
+let importPlan = null;
+function parseTargetNumber(c){
+  const t = String(c).replace(/\s/g,'');
+  if(/^\d+$/.test(t)) return Number(t);
+  if(/^\d{1,3}([.,]\d{3})+$/.test(t)) return Number(t.replace(/[.,]/g,''));
+  return NaN;
+}
+function parseImportText(text){
+  const rows = [], errors = [];
+  let first = true;
+  String(text||'').split(/\r?\n/).forEach((line, i)=>{
+    line = line.replace(/"/g,'').trim();
+    if(!line) return;
+    let cells = line.split('\t').map(c=>c.trim()).filter(c=>c!=='');
+    if(cells.length < 2){
+      const m = line.match(/^(.*[^\d\s.,;|])[\s;|,]+(\d[\d.,\s]*)$/);
+      if(m) cells = [m[1].trim(), m[2].trim()];
+    }
+    const nameCell = cells.find(c=>/[A-Za-zÀ-ỹĐđ]/.test(c));
+    const numCells = cells.filter(c=>c!==nameCell && /^[\d.,\s]+$/.test(c));
+    const isFirst = first; first = false;
+    if(!nameCell || !numCells.length){
+      if(!isFirst) errors.push('Dòng ' + (i+1) + ': không nhận ra tên đơn vị và chỉ tiêu — “' + line.slice(0,50) + '”');
+      return;                                   // dòng đầu không có số: coi là tiêu đề
+    }
+    const v = parseTargetNumber(numCells[numCells.length-1]);
+    if(!isFinite(v)){ errors.push('Dòng ' + (i+1) + ': chỉ tiêu không hợp lệ — “' + numCells[numCells.length-1] + '”'); return; }
+    rows.push({line:i+1, name:nameCell, target:v});
+  });
+  return {rows, errors};
+}
+function findUnitForImport(name, byKey){
+  const k = normUnitName(name);
+  if(byKey.has(k)) return {unit: byKey.get(k), rename: null};
+  for(const off in OFFICIAL_UNIT_ALIASES){
+    const ko = normUnitName(off), ka = normUnitName(OFFICIAL_UNIT_ALIASES[off]);
+    if(k === ko && byKey.has(ka)) return {unit: byKey.get(ka), rename: off};     // nhập tên chính thức, đơn vị đang lưu tên cũ
+    if(k === ka && byKey.has(ko)) return {unit: byKey.get(ko), rename: null};
+  }
+  return {unit: null, rename: null};
+}
+function previewImport(){
+  const box = document.getElementById('importPreview');
+  const text = document.getElementById('importText').value;
+  if(!text.trim()){ importPlan = null; Motion.put(box, ''); return; }
+  const {rows, errors} = parseImportText(text);
+  const byKey = new Map(unitsCache.map(u=>[normUnitName(u.name), u]));
+  const seen = new Map(), plan = [];
+  rows.forEach(r=>{
+    const k = normUnitName(r.name);
+    if(seen.has(k)){ errors.push('Dòng ' + r.line + ': trùng tên với dòng ' + seen.get(k) + ' — “' + r.name + '” (lấy dòng sau)'); const j = plan.findIndex(p=>p.key===k); if(j>=0) plan.splice(j,1); }
+    seen.set(k, r.line);
+    const f = findUnitForImport(r.name, byKey), u = f.unit;
+    const cur = u ? unitTotalTarget(u) : null;
+    plan.push({key:k, name: f.rename || (u ? u.name : r.name), rename: f.rename, unit:u, cur, target:r.target,
+      status: !u ? 'new' : (cur === r.target && !f.rename ? 'same' : 'upd')});
+  });
+  importPlan = plan;
+  const n = s=>plan.filter(p=>p.status===s).length;
+  const total = plan.reduce((s,p)=>s+p.target,0);
+  let html = '<div class="import-sum"><span>Nhận được <b>' + plan.length + '</b> dòng, tổng chỉ tiêu <b>' + fmtNum(total) + '</b></span>' +
+    '<span>Cập nhật: <b>' + n('upd') + '</b></span><span>Thêm mới: <b>' + n('new') + '</b></span><span>Không đổi: <b>' + n('same') + '</b></span>' +
+    (errors.length ? '<span class="bad">Dòng lỗi: <b>' + errors.length + '</b></span>' : '') + '</div>';
+  if(plan.length){
+    html += '<div class="table-scroll"><table><thead><tr><th>Đơn vị</th><th class="num">Chỉ tiêu hiện tại</th><th class="num">Chỉ tiêu mới</th><th>Trạng thái</th></tr></thead><tbody>' +
+      plan.map(p=>'<tr><td>' + escapeHTML(p.name) + '</td><td class="num">' + (p.cur===null ? '—' : fmtNum(p.cur)) + '</td><td class="num">' + fmtNum(p.target) + '</td>' +
+        '<td class="st-' + p.status + '">' + (p.status==='new' ? 'Thêm mới' : p.status==='upd' ? 'Cập nhật' : 'Không đổi') + '</td></tr>').join('') + '</tbody></table></div>';
+  }
+  if(errors.length) html += '<ul class="import-errors">' + errors.slice(0,8).map(e=>'<li>' + escapeHTML(e) + '</li>').join('') + (errors.length>8 ? '<li>… và ' + (errors.length-8) + ' dòng lỗi khác</li>' : '') + '</ul>';
+  const changes = n('upd') + n('new');
+  html += '<div class="import-actions"><button class="btn btn-primary btn-sm" type="button" id="btnApplyImport" onclick="applyImport()"' + (changes ? '' : ' disabled') + '>Áp dụng ' + changes + ' thay đổi</button></div>';
+  Motion.put(box, html, true);
+}
+async function applyImport(){
+  if(!importPlan) return;
+  const todo = importPlan.filter(p=>p.status!=='same');
+  if(!todo.length) return;
+  const btn = document.getElementById('btnApplyImport'); if(btn) btn.disabled = true;
+  let added = 0, updated = 0;
+  todo.forEach((p,i)=>{
+    if(p.status==='new'){
+      const id = 'u' + (Date.now() + i);
+      unitsCache.push({id, name:p.name, targets:{1:p.target, 2:0, 3:0}});
+      unitDataCache[id] = emptyUnitData(); added++;
+    } else {
+      if(!p.unit.targets) p.unit.targets = {1:0,2:0,3:0};
+      p.unit.targets[1] = p.target; p.unit.targets[2] = 0;
+      if(p.rename) p.unit.name = p.rename;
+      updated++;
+    }
+  });
+  const ok = await setJSON('config:units', true, unitsCache);
+  if(ok){
+    showToast('Đã nhập nhanh: cập nhật ' + updated + ' đơn vị, thêm mới ' + added + ' đơn vị');
+    document.getElementById('importText').value = ''; importPlan = null;
+    Motion.put(document.getElementById('importPreview'), '', true);
+    saveLocalCache(); populateUnitSelect(); renderUnitView(); renderUnitManage(); renderAdmin();
+  } else { showToast('Lỗi khi lưu — kiểm tra kết nối Google Sheet', 'error'); if(btn) btn.disabled = false; }
+}
+function clearImport(){
+  const t = document.getElementById('importText'); if(t) t.value = '';
+  const f = document.getElementById('importFile'); if(f) f.value = '';
+  previewImport();
+}
+async function loadImportFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const t = document.getElementById('importText');
+  try{
+    if(/\.xlsx$/i.test(file.name)){
+      if(typeof ExcelJS === 'undefined'){ showToast('Đang tải thư viện Excel — thử lại sau 1-2 giây', 'warn'); input.value = ''; return; }
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(await file.arrayBuffer());
+      const ws = wb.worksheets[0], lines = [];
+      if(ws) ws.eachRow(row=>{
+        const vals = [];
+        row.eachCell({includeEmpty:false}, c=>{
+          let v = c.value;
+          if(v && typeof v === 'object') v = v.result !== undefined ? v.result : (v.richText ? v.richText.map(x=>x.text).join('') : (v.text || ''));
+          vals.push(String(v === null || v === undefined ? '' : v));
+        });
+        lines.push(vals.join('\t'));
+      });
+      t.value = lines.join('\n');
+    } else {
+      t.value = await file.text();
+    }
+    previewImport();
+  }catch(e){ console.error(e); showToast('Không đọc được tệp — kiểm tra định dạng .xlsx/.csv', 'error'); }
+  input.value = '';
 }
 
 async function addUnit(){
